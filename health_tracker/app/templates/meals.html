@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}饮食记录 · 健康记录{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">今日饮食</p>
+    <h1>记录每一餐，不需要算得特别精确。</h1>
+    <p class="muted">MVP 会根据文字和照片做本地估算，你也可以手动覆盖营养数据。</p>
+  </div>
+  <div class="mini-summary">
+    <span>{{ totals.calories }} kcal</span>
+    <small>蛋白 {{ totals.protein_g }}g · 碳水 {{ totals.carbs_g }}g · 脂肪 {{ totals.fat_g }}g</small>
+  </div>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>添加饮食</h2>
+    <span class="soft-label">图片可选</span>
+  </div>
+  <form class="form-grid" action="/meals" method="post" enctype="multipart/form-data">
+    <label>
+      日期
+      <input type="date" name="entry_date" value="{{ today }}" required>
+    </label>
+    <label>
+      餐次
+      <select name="meal_type" required>
+        {% for key, label in meal_type_labels.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="full">
+      快速模板
+      <div class="template-row">
+        {% for item in templates %}
+          <button class="chip" type="button" data-template="{{ item }}">{{ item }}</button>
+        {% endfor %}
+      </div>
+    </label>
+    <label class="full">
+      文字描述
+      <textarea id="meal-description" name="description" rows="3" placeholder="例如：一碗米饭、两个鸡蛋、一杯拿铁" required></textarea>
+    </label>
+    <label>
+      食物照片
+      <input type="file" name="image" accept="image/*">
+    </label>
+    <label>
+      估算热量 kcal
+      <input type="number" step="0.1" name="calories" placeholder="留空自动估算">
+    </label>
+    <label>
+      蛋白质 g
+      <input type="number" step="0.1" name="protein_g" placeholder="留空自动估算">
+    </label>
+    <label>
+      碳水 g
+      <input type="number" step="0.1" name="carbs_g" placeholder="留空自动估算">
+    </label>
+    <label>
+      脂肪 g
+      <input type="number" step="0.1" name="fat_g" placeholder="留空自动估算">
+    </label>
+    <label class="full">
+      备注
+      <input type="text" name="notes" placeholder="例如：外食、偏咸、很饱">
+    </label>
+    <div class="form-actions full">
+      <button class="primary-btn" type="submit">保存饮食记录</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>最近饮食记录</h2>
+    <span>{{ meals|length }} 条</span>
+  </div>
+  {% if meals %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>餐次</th>
+            <th>描述</th>
+            <th>照片</th>
+            <th>热量</th>
+            <th>蛋白</th>
+            <th>碳水</th>
+            <th>脂肪</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for meal in meals %}
+            <tr>
+              <td>{{ meal.entry_date.strftime("%Y-%m-%d") }}</td>
+              <td><span class="pill">{{ meal_type_labels.get(meal.meal_type, meal.meal_type) }}</span></td>
+              <td>{{ meal.description }}</td>
+              <td>
+                {% if meal.image_path %}
+                  <a href="{{ meal.image_path }}" target="_blank">查看</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ meal.calories }} kcal</td>
+              <td>{{ meal.protein_g }}g</td>
+              <td>{{ meal.carbs_g }}g</td>
+              <td>{{ meal.fat_g }}g</td>
+              <td>{{ meal.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">还没有饮食记录，先从今天的一餐开始。</p>
+  {% endif %}
+</section>
+{% endblock %}

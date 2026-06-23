@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}训练记录 · 健康记录{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">训练记录</p>
+    <h1>把动作、组数和主观强度记下来。</h1>
+    <p class="muted">训练量按 sets × reps × weight_kg 估算，跑步等自重项目可把重量填 0。</p>
+  </div>
+  <div class="mini-summary">
+    <span>{{ totals.sets }} 组</span>
+    <small>今日训练量 {{ totals.volume }} kg</small>
+  </div>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>添加训练</h2>
+    <button class="secondary-btn" type="button" id="add-workout-row">添加一行动作</button>
+  </div>
+  <form action="/workouts" method="post">
+    <label class="date-field">
+      日期
+      <input type="date" name="entry_date" value="{{ today }}" required>
+    </label>
+
+    <div class="workout-rows" id="workout-rows">
+      <div class="workout-row">
+        <label>
+          动作
+          <input type="text" name="exercise" placeholder="深蹲、卧推、跑步">
+        </label>
+        <label>
+          组数
+          <input type="number" name="sets" min="0" value="3">
+        </label>
+        <label>
+          次数
+          <input type="number" name="reps" min="0" value="10">
+        </label>
+        <label>
+          重量 kg
+          <input type="number" step="0.5" name="weight_kg" min="0" value="0">
+        </label>
+        <label>
+          RPE
+          <input type="number" name="rpe" min="1" max="10" placeholder="1-10">
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="to_failure" value="0">
+          接近力竭
+        </label>
+        <label>
+          备注
+          <input type="text" name="notes" placeholder="动作感觉、疼痛、节奏">
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="primary-btn" type="submit">保存训练记录</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>最近训练记录</h2>
+    <span>{{ entries|length }} 条</span>
+  </div>
+  {% if entries %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>动作</th>
+            <th>组数</th>
+            <th>次数</th>
+            <th>重量</th>
+            <th>RPE</th>
+            <th>力竭</th>
+            <th>训练量</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td>{{ entry.entry_date.strftime("%Y-%m-%d") }}</td>
+              <td>{{ entry.exercise }}</td>
+              <td>{{ entry.sets }}</td>
+              <td>{{ entry.reps }}</td>
+              <td>{{ entry.weight_kg }} kg</td>
+              <td>{{ entry.rpe or "-" }}</td>
+              <td>{{ "是" if entry.to_failure else "否" }}</td>
+              <td>{{ entry.volume }} kg</td>
+              <td>{{ entry.notes or "-" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">还没有训练记录，可以先记录今天最重要的一个动作。</p>
+  {% endif %}
+</section>
+{% endblock %}

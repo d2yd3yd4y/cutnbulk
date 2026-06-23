@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}健康记录{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">H</span>
+        <span>
+          <strong>健康记录</strong>
+          <small>饮食 · 训练 · 身体数据</small>
+        </span>
+      </a>
+      <nav class="nav">
+        <a class="{% if active_page == 'dashboard' %}active{% endif %}" href="/">首页</a>
+        <a class="{% if active_page == 'meals' %}active{% endif %}" href="/meals">饮食</a>
+        <a class="{% if active_page == 'workouts' %}active{% endif %}" href="/workouts">训练</a>
+        <a class="{% if active_page == 'body' %}active{% endif %}" href="/body">身体</a>
+        <a class="{% if active_page == 'weekly' %}active{% endif %}" href="/weekly">周复盘</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', path='/app.js') }}"></script>
+  </body>
+</html>

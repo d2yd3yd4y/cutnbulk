@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}周复盘 · 健康记录{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+  <div>
+    <p class="eyebrow">{{ review.start_date.strftime("%Y-%m-%d") }} 至 {{ review.end_date.strftime("%Y-%m-%d") }}</p>
+    <h1>最近 7 天复盘</h1>
+    <p class="muted">这里用规则引擎做温和、具体的调整建议。记录越连续，判断越可靠。</p>
+  </div>
+  <div class="advice-box">
+    <span>本周调整建议</span>
+    <strong>{{ review.summary }}</strong>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card">
+    <span>平均热量</span>
+    <strong>{{ review.average_calories }} kcal</strong>
+    <small>按最近 7 天平均</small>
+  </article>
+  <article class="stat-card">
+    <span>平均蛋白质</span>
+    <strong>{{ review.average_protein }} g</strong>
+    <small>优先保证每餐蛋白质</small>
+  </article>
+  <article class="stat-card">
+    <span>平均碳水</span>
+    <strong>{{ review.average_carbs }} g</strong>
+    <small>训练日前后可适当提高</small>
+  </article>
+  <article class="stat-card">
+    <span>平均脂肪</span>
+    <strong>{{ review.average_fat }} g</strong>
+    <small>观察饱腹感和外食频率</small>
+  </article>
+  <article class="stat-card">
+    <span>总训练组数</span>
+    <strong>{{ review.total_sets }} 组</strong>
+    <small>最近 7 天累计</small>
+  </article>
+  <article class="stat-card">
+    <span>总训练量</span>
+    <strong>{{ review.total_volume }} kg</strong>
+    <small>sets × reps × weight</small>
+  </article>
+  <article class="stat-card">
+    <span>体重趋势</span>
+    <strong>{{ review.weight_trend }}</strong>
+    <small>基于已记录身体数据</small>
+  </article>
+  <article class="stat-card">
+    <span>腰围趋势</span>
+    <strong>{{ review.waist_trend }}</strong>
+    <small>比单日体重更稳定</small>
+  </article>
+  <article class="stat-card">
+    <span>平均睡眠</span>
+    <strong>{{ review.average_sleep if review.average_sleep is not none else "-" }} 小时</strong>
+    <small>恢复质量参考</small>
+  </article>
+  <article class="stat-card">
+    <span>平均疲劳</span>
+    <strong>{{ review.average_fatigue if review.average_fatigue is not none else "-" }}</strong>
+    <small>1-10 主观评分</small>
+  </article>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>身体数据趋势</h2>
+    <span>已记录 {{ review.recorded_days }} 天</span>
+  </div>
+  {% if review.body_metrics %}
+    <div class="trend-list">
+      {% for metric in review.body_metrics %}
+        <div class="trend-item">
+          <span>{{ metric.entry_date.strftime("%m-%d") }}</span>
+          <strong>{{ metric.weight_kg if metric.weight_kg is not none else "-" }} kg</strong>
+          <small>腰围 {{ metric.waist_cm if metric.waist_cm is not none else "-" }} cm · 睡眠 {{ metric.sleep_hours if metric.sleep_hours is not none else "-" }}h · 疲劳 {{ metric.fatigue_level if metric.fatigue_level is not none else "-" }}</small>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">最近 7 天还没有身体数据。记录满 3 天后复盘会更准确。</p>
+  {% endif %}
+</section>
+{% endblock %}

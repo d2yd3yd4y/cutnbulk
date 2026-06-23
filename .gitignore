@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+health_tracker/health_tracker.db
+health_tracker/app/uploads/*
+!health_tracker/app/uploads/.gitkeep

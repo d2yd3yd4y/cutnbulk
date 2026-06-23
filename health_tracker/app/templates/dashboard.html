@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}首页 · 健康记录{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+  <div>
+    <p class="eyebrow">今天是 {{ today.strftime("%Y-%m-%d") }}</p>
+    <h1>今天先记录下来，慢慢就会看见趋势。</h1>
+    <p class="muted">不需要完美，只要持续。这里会汇总你今天的饮食、训练和身体状态。</p>
+  </div>
+  <div class="advice-box">
+    <span>每日一句建议</span>
+    <strong>{{ daily_advice }}</strong>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card">
+    <span>今日总热量</span>
+    <strong>{{ summary.calories }} kcal</strong>
+    <small>来自今日饮食记录</small>
+  </article>
+  <article class="stat-card">
+    <span>蛋白质 / 碳水 / 脂肪</span>
+    <strong>{{ summary.protein_g }}g / {{ summary.carbs_g }}g / {{ summary.fat_g }}g</strong>
+    <small>三大营养素估算</small>
+  </article>
+  <article class="stat-card">
+    <span>今日训练</span>
+    <strong>{{ summary.workout_sets }} 组</strong>
+    <small>训练量 {{ summary.workout_volume }} kg</small>
+  </article>
+  <article class="stat-card">
+    <span>最近身体数据</span>
+    {% if latest_body %}
+      <strong>{{ latest_body.weight_kg or "-" }} kg · {{ latest_body.waist_cm or "-" }} cm</strong>
+      <small>{{ latest_body.entry_date.strftime("%Y-%m-%d") }} 更新</small>
+    {% else %}
+      <strong>暂无记录</strong>
+      <small>先添加一次身体数据</small>
+    {% endif %}
+  </article>
+</section>
+
+<section class="quick-actions">
+  <a class="action-card" href="/meals">
+    <span>添加饮食</span>
+    <strong>记录一餐和照片</strong>
+  </a>
+  <a class="action-card" href="/workouts">
+    <span>添加训练</span>
+    <strong>记录动作、组数和训练量</strong>
+  </a>
+  <a class="action-card" href="/body">
+    <span>添加身体数据</span>
+    <strong>体重、腰围、睡眠、疲劳</strong>
+  </a>
+  <a class="action-card" href="/weekly">
+    <span>查看周复盘</span>
+    <strong>最近 7 天趋势与建议</strong>
+  </a>
+</section>
+
+<section class="two-columns">
+  <article class="card">
+    <div class="section-title">
+      <h2>最近饮食</h2>
+      <a href="/meals">查看全部</a>
+    </div>
+    {% if recent_meals %}
+      <div class="compact-list">
+        {% for meal in recent_meals %}
+          <div class="compact-item">
+            <div>
+              <strong>{{ meal.description }}</strong>
+              <small>{{ meal.entry_date.strftime("%m-%d") }} · {{ meal_type_labels.get(meal.meal_type, meal.meal_type) }}</small>
+            </div>
+            <span class="pill">{{ meal.calories }} kcal</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">还没有饮食记录。</p>
+    {% endif %}
+  </article>
+
+  <article class="card">
+    <div class="section-title">
+      <h2>最近训练</h2>
+      <a href="/workouts">查看全部</a>
+    </div>
+    {% if recent_workouts %}
+      <div class="compact-list">
+        {% for workout in recent_workouts %}
+          <div class="compact-item">
+            <div>
+              <strong>{{ workout.exercise }}</strong>
+              <small>{{ workout.entry_date.strftime("%m-%d") }} · {{ workout.sets }} 组 x {{ workout.reps }} 次</small>
+            </div>
+            <span class="pill">{{ workout.volume }} kg</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">还没有训练记录。</p>
+    {% endif %}
+  </article>
+</section>
+{% endblock %}
