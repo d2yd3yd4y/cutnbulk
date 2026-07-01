@@ -4,16 +4,10 @@
 
 {% block content %}
 <section class="calendar-shell">
-  <div class="calendar-header">
-    <div>
-      <p class="eyebrow">每日记录</p>
-      <h1>{{ first_day.year }} 年 {{ first_day.month }} 月</h1>
-    </div>
-    <div class="calendar-actions">
-      <a class="secondary-btn" href="/?year={{ prev_year }}&month={{ prev_month }}">上个月</a>
-      <a class="primary-btn" href="/day/{{ today.isoformat() }}">记录今天</a>
-      <a class="secondary-btn" href="/?year={{ next_year }}&month={{ next_month }}">下个月</a>
-    </div>
+  <div class="month-bar">
+    <a class="icon-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="上个月">‹</a>
+    <h1>{{ first_day.year }} 年 {{ first_day.month }} 月</h1>
+    <a class="icon-btn" href="/?year={{ next_year }}&month={{ next_month }}" aria-label="下个月">›</a>
   </div>
 
   <div class="calendar-card">
@@ -36,21 +30,44 @@
             {% if entry %}
               <div class="day-summary">
                 {% if entry.weight_kg is not none %}
-                  <span>{{ entry.weight_kg }}kg</span>
+                  <span class="weight-tag">{{ entry.weight_kg }}kg</span>
                 {% endif %}
                 {% if entry.training_parts %}
                   <span>{{ entry.training_parts.replace(",", "/") }}</span>
                 {% endif %}
                 {% if entry.calories is not none %}
-                  <span>{{ entry.calories|round|int }} kcal</span>
+                  <span class="desktop-only">{{ entry.calories|round|int }} kcal</span>
                 {% endif %}
               </div>
-            {% else %}
-              <div class="day-empty">添加</div>
             {% endif %}
           </a>
         {% endfor %}
       {% endfor %}
+    </div>
+  </div>
+
+  <div class="overview-card">
+    <div class="section-title compact-title">
+      <h2>本月概览</h2>
+      <a href="/summary">看趋势</a>
+    </div>
+    <div class="overview-grid">
+      <div>
+        <span>已记录</span>
+        <strong>{{ month_summary.recorded_days }} 天</strong>
+      </div>
+      <div>
+        <span>平均体重</span>
+        <strong>{{ month_summary.average_weight if month_summary.average_weight is not none else "-" }} kg</strong>
+      </div>
+      <div>
+        <span>平均热量</span>
+        <strong>{{ month_summary.average_calories|round|int if month_summary.average_calories is not none else "-" }} kcal</strong>
+      </div>
+      <div>
+        <span>训练</span>
+        <strong>{{ month_summary.training_days }} 天</strong>
+      </div>
     </div>
   </div>
 </section>

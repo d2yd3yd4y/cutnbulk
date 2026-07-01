@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}趋势 · cutnbulk{% endblock %}
+
+{% block content %}
+<section class="summary-page">
+  <div class="mobile-page-header single">
+    <div>
+      <h1>最近 7 天</h1>
+      <span>{{ start.strftime("%m.%d") }} - {{ today.strftime("%m.%d") }}</span>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>记录</span>
+      <strong>{{ summary.recorded_days }} 天</strong>
+    </article>
+    <article class="summary-card">
+      <span>平均体重</span>
+      <strong>{{ summary.average_weight if summary.average_weight is not none else "-" }} kg</strong>
+    </article>
+    <article class="summary-card">
+      <span>平均热量</span>
+      <strong>{{ summary.average_calories|round|int if summary.average_calories is not none else "-" }} kcal</strong>
+    </article>
+    <article class="summary-card">
+      <span>平均蛋白</span>
+      <strong>{{ summary.average_protein if summary.average_protein is not none else "-" }} g</strong>
+    </article>
+    <article class="summary-card wide">
+      <span>训练天数</span>
+      <strong>{{ summary.training_days }} 天</strong>
+    </article>
+  </div>
+
+  <article class="advice-card">
+    <span>一句建议</span>
+    <strong>{{ summary.advice }}</strong>
+  </article>
+
+  <section class="record-section">
+    <div class="section-title">
+      <h2>最近记录</h2>
+    </div>
+    {% if entries %}
+      <div class="mobile-list">
+        {% for entry in entries %}
+          <a href="/day/{{ entry.entry_date.isoformat() }}" class="mobile-list-item">
+            <div>
+              <strong>{{ entry.entry_date.strftime("%m.%d") }}</strong>
+              <span>{{ entry.training_parts.replace(",", "/") if entry.training_parts else "未记录训练" }}</span>
+            </div>
+            <em>{{ entry.calories|round|int if entry.calories is not none else "-" }} kcal</em>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">先记录一天，趋势会显示在这里。</p>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

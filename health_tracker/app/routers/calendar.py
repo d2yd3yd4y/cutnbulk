@@ -50,6 +50,24 @@ def calendar_page(
         .all()
     )
     entries_by_date = {entry.entry_date.isoformat(): entry for entry in entries}
+    current_month_entries = [
+        entry for entry in entries if entry.entry_date.year == current_year and entry.entry_date.month == current_month
+    ]
+    weights = [entry.weight_kg for entry in current_month_entries if entry.weight_kg is not None]
+    calories = [entry.calories for entry in current_month_entries if entry.calories is not None]
+    training_days = len(
+        [
+            entry
+            for entry in current_month_entries
+            if entry.training_parts and entry.training_parts != "休息"
+        ]
+    )
+    month_summary = {
+        "recorded_days": len(current_month_entries),
+        "average_weight": _avg(weights),
+        "average_calories": _avg(calories),
+        "training_days": training_days,
+    }
 
     return templates.TemplateResponse(
         name="calendar.html",
@@ -65,6 +83,7 @@ def calendar_page(
             "prev_month": prev_month,
             "next_year": next_year,
             "next_month": next_month,
+            "month_summary": month_summary,
             "active_page": "calendar",
         },
     )
@@ -77,3 +96,9 @@ def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
     if shifted_month > 12:
         return year + 1, 1
     return year, shifted_month
+
+
+def _avg(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(sum(values) / len(values), 1)

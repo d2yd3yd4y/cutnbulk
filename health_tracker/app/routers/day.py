@@ -16,6 +16,7 @@ router = APIRouter(prefix="/day", tags=["day"])
 templates = Jinja2Templates(directory="app/templates")
 UPLOAD_DIR = Path("app/uploads")
 TRAINING_PARTS = ["胸", "背", "腿", "肩", "手臂", "核心", "有氧", "休息"]
+WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 
 @router.get("/{entry_date}")
@@ -38,6 +39,7 @@ def day_page(
             "request": request,
             "entry": entry,
             "entry_date": target_date,
+            "date_label": _format_date_label(target_date),
             "today": date.today(),
             "training_parts": TRAINING_PARTS,
             "selected_parts": selected_parts,
@@ -106,6 +108,10 @@ def _parse_date(value: str) -> date | None:
         return datetime.strptime(value, "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _format_date_label(value: date) -> str:
+    return f"{value.month} 月 {value.day} 日 {WEEKDAY_LABELS[value.weekday()]}"
 
 
 def _split_training_parts(value: str | None) -> list[str]:
