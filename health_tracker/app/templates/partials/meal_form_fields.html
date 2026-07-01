@@ -1,0 +1,49 @@
+<label>
+  餐次
+  <select name="meal_type" class="meal-type-select" required>
+    {% for key, label in meal_types %}
+      <option value="{{ key }}" {% if meal and meal.meal_type == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</label>
+<label class="custom-meal-name">
+  自定义餐名
+  <input type="text" name="meal_name" value="{{ meal.meal_name if meal and meal.meal_name else '' }}" placeholder="例如：下午加餐、火锅">
+</label>
+<label class="full-width">
+  食物描述
+  <textarea name="description" rows="3" required placeholder="例如：鸡胸肉、米饭、西兰花">{{ meal.description if meal else '' }}</textarea>
+</label>
+<div class="form-grid compact full-width">
+  <label>
+    热量 kcal
+    <input type="number" inputmode="decimal" step="0.1" name="calories" value="{{ meal.calories if meal else '' }}" placeholder="自动估算">
+  </label>
+  <label>
+    蛋白质 g
+    <input type="number" inputmode="decimal" step="0.1" name="protein_g" value="{{ meal.protein_g if meal else '' }}" placeholder="自动估算">
+  </label>
+  <label>
+    碳水 g
+    <input type="number" inputmode="decimal" step="0.1" name="carbs_g" value="{{ meal.carbs_g if meal else '' }}" placeholder="自动估算">
+  </label>
+  <label>
+    脂肪 g
+    <input type="number" inputmode="decimal" step="0.1" name="fat_g" value="{{ meal.fat_g if meal else '' }}" placeholder="自动估算">
+  </label>
+</div>
+<div class="image-row full-width">
+  <label class="photo-picker">
+    <input type="file" name="image" accept="image/*">
+    <span>添加照片</span>
+  </label>
+  {% if meal and meal.image_path %}
+    <a class="food-thumb" href="{{ meal.image_path }}" target="_blank">
+      <img src="{{ meal.image_path }}" alt="食物照片">
+    </a>
+  {% endif %}
+</div>
+<label class="full-width">
+  备注
+  <input type="text" name="notes" value="{{ meal.notes if meal and meal.notes else '' }}" placeholder="可选">
+</label>

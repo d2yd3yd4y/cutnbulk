@@ -21,6 +21,7 @@ class MealEntry(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     entry_date: Mapped[date] = mapped_column(Date, index=True)
     meal_type: Mapped[str] = mapped_column(String(20), index=True)
+    meal_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     description: Mapped[str] = mapped_column(Text)
     image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     calories: Mapped[float] = mapped_column(Float, default=0)

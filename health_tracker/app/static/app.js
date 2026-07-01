@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindMealTemplates();
   bindWorkoutRows();
   bindTrainingParts();
+  bindMealTypeFields();
 });
 
 function bindMealTemplates() {
@@ -69,5 +70,19 @@ function bindTrainingParts() {
         if (rest) rest.checked = false;
       }
     });
+  });
+}
+
+function bindMealTypeFields() {
+  document.querySelectorAll(".meal-form").forEach((form) => {
+    const select = form.querySelector(".meal-type-select");
+    const customField = form.querySelector(".custom-meal-name");
+    if (!select || !customField) return;
+
+    const sync = () => {
+      customField.hidden = select.value !== "custom";
+    };
+    select.addEventListener("change", sync);
+    sync();
   });
 }

@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.database import Base, engine
+from app.database import Base, engine, ensure_sqlite_schema
 from app.routers import body, calendar, day, meals, summary, weekly, workouts
 
 
 Base.metadata.create_all(bind=engine)
+ensure_sqlite_schema()
 
 app = FastAPI(title="cutnbulk")
 

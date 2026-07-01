@@ -17,7 +17,7 @@
     <div class="save-banner">已保存</div>
   {% endif %}
 
-  <form class="daily-form" action="/day/{{ entry_date.isoformat() }}" method="post" enctype="multipart/form-data">
+  <form class="daily-form" action="/day/{{ entry_date.isoformat() }}" method="post">
     <section class="record-section">
       <div class="section-title">
         <h2>身体</h2>
@@ -61,45 +61,6 @@
     </section>
 
     <section class="record-section">
-      <div class="section-title">
-        <h2>饮食</h2>
-      </div>
-      <label class="stacked-field">
-        今日饮食描述
-        <textarea name="food_description" rows="3" placeholder="早餐鸡蛋牛奶，午餐牛肉饭">{{ entry.food_description if entry and entry.food_description else '' }}</textarea>
-      </label>
-      <div class="form-grid compact">
-        <label>
-          总热量 kcal
-          <input type="number" inputmode="decimal" step="0.1" name="calories" value="{{ entry.calories if entry and entry.calories is not none else '' }}" placeholder="自动估算">
-        </label>
-        <label>
-          蛋白质 g
-          <input type="number" inputmode="decimal" step="0.1" name="protein_g" value="{{ entry.protein_g if entry and entry.protein_g is not none else '' }}" placeholder="自动估算">
-        </label>
-        <label>
-          碳水 g
-          <input type="number" inputmode="decimal" step="0.1" name="carbs_g" value="{{ entry.carbs_g if entry and entry.carbs_g is not none else '' }}" placeholder="自动估算">
-        </label>
-        <label>
-          脂肪 g
-          <input type="number" inputmode="decimal" step="0.1" name="fat_g" value="{{ entry.fat_g if entry and entry.fat_g is not none else '' }}" placeholder="自动估算">
-        </label>
-      </div>
-      <div class="image-row">
-        <label class="photo-picker">
-          <input type="file" name="image" accept="image/*">
-          <span>添加照片</span>
-        </label>
-        {% if entry and entry.image_path %}
-          <a class="food-thumb" href="{{ entry.image_path }}" target="_blank">
-            <img src="{{ entry.image_path }}" alt="食物照片">
-          </a>
-        {% endif %}
-      </div>
-    </section>
-
-    <section class="record-section">
       <label class="stacked-field">
         今日备注
         <textarea name="daily_note" rows="2" placeholder="状态、外食、特殊情况">{{ entry.daily_note if entry and entry.daily_note else '' }}</textarea>
@@ -110,5 +71,78 @@
       <button class="primary-btn large" type="submit">保存今天</button>
     </div>
   </form>
+
+  <section class="record-section meals-section">
+    <div class="section-title">
+      <h2>饮食</h2>
+      <a href="#add-meal" class="small-action">+ 添加一顿</a>
+    </div>
+
+    <div class="meal-total-card">
+      <div class="meal-total-main">
+        <span>总热量</span>
+        <strong>{{ meal_totals.calories|round|int }} kcal</strong>
+      </div>
+      <div class="macro-row">
+        <span>蛋白 {{ meal_totals.protein_g }}g</span>
+        <span>碳水 {{ meal_totals.carbs_g }}g</span>
+        <span>脂肪 {{ meal_totals.fat_g }}g</span>
+      </div>
+    </div>
+
+    {% if meals %}
+      <div class="meal-list">
+        {% for meal in meals %}
+          <article class="meal-card">
+            <div class="meal-card-top">
+              <div>
+                <span class="meal-label">
+                  {{ meal.meal_name if meal.meal_type == "custom" and meal.meal_name else meal_type_labels.get(meal.meal_type, meal.meal_type) }}
+                </span>
+                <h3>{{ meal.description }}</h3>
+              </div>
+              {% if meal.image_path %}
+                <a class="meal-thumb" href="{{ meal.image_path }}" target="_blank">
+                  <img src="{{ meal.image_path }}" alt="食物照片">
+                </a>
+              {% endif %}
+            </div>
+            <div class="meal-macros">
+              <strong>{{ meal.calories|round|int }} kcal</strong>
+              <span>蛋白 {{ meal.protein_g }}g</span>
+              <span>碳水 {{ meal.carbs_g }}g</span>
+              <span>脂肪 {{ meal.fat_g }}g</span>
+            </div>
+            {% if meal.notes %}
+              <p class="meal-note">{{ meal.notes }}</p>
+            {% endif %}
+            <div class="meal-actions">
+              <details class="meal-edit">
+                <summary>编辑</summary>
+                <form class="meal-form" action="/day/{{ entry_date.isoformat() }}/meals/{{ meal.id }}/update" method="post" enctype="multipart/form-data">
+                  {% include "partials/meal_form_fields.html" %}
+                  <button class="secondary-btn full-width" type="submit">保存这一顿</button>
+                </form>
+              </details>
+              <form action="/day/{{ entry_date.isoformat() }}/meals/{{ meal.id }}/delete" method="post">
+                <button class="danger-btn" type="submit">删除</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">还没有饮食记录，先添加一顿。</p>
+    {% endif %}
+
+    <details class="meal-add-panel" id="add-meal" open>
+      <summary>+ 添加一顿</summary>
+      <form class="meal-form" action="/day/{{ entry_date.isoformat() }}/meals" method="post" enctype="multipart/form-data">
+        {% set meal = none %}
+        {% include "partials/meal_form_fields.html" %}
+        <button class="primary-btn full-width" type="submit">保存这一顿</button>
+      </form>
+    </details>
+  </section>
 </section>
 {% endblock %}

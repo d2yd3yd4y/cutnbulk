@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import DailyEntry
+from app.models import DailyEntry, MealEntry
 
 
 router = APIRouter(tags=["calendar"])
@@ -50,11 +50,30 @@ def calendar_page(
         .all()
     )
     entries_by_date = {entry.entry_date.isoformat(): entry for entry in entries}
+    meals = (
+        db.query(MealEntry)
+        .filter(MealEntry.entry_date >= visible_start, MealEntry.entry_date <= visible_end)
+        .all()
+    )
+    meal_totals_by_date = _meal_totals_by_date(meals)
     current_month_entries = [
         entry for entry in entries if entry.entry_date.year == current_year and entry.entry_date.month == current_month
     ]
+    current_month_meal_totals = [
+        totals
+        for day_key, totals in meal_totals_by_date.items()
+        if _date_in_month(day_key, current_year, current_month)
+    ]
+    recorded_dates = {
+        *[entry.entry_date.isoformat() for entry in current_month_entries],
+        *[
+            day_key
+            for day_key in meal_totals_by_date
+            if _date_in_month(day_key, current_year, current_month)
+        ],
+    }
     weights = [entry.weight_kg for entry in current_month_entries if entry.weight_kg is not None]
-    calories = [entry.calories for entry in current_month_entries if entry.calories is not None]
+    calories = [totals["calories"] for totals in current_month_meal_totals]
     training_days = len(
         [
             entry
@@ -63,7 +82,7 @@ def calendar_page(
         ]
     )
     month_summary = {
-        "recorded_days": len(current_month_entries),
+        "recorded_days": len(recorded_dates),
         "average_weight": _avg(weights),
         "average_calories": _avg(calories),
         "training_days": training_days,
@@ -79,6 +98,7 @@ def calendar_page(
             "weeks": month_calendar,
             "weekdays": WEEKDAYS,
             "entries_by_date": entries_by_date,
+            "meal_totals_by_date": meal_totals_by_date,
             "prev_year": prev_year,
             "prev_month": prev_month,
             "next_year": next_year,
@@ -102,3 +122,26 @@ def _avg(values: list[float]) -> float | None:
     if not values:
         return None
     return round(sum(values) / len(values), 1)
+
+
+def _meal_totals_by_date(meals: list[MealEntry]) -> dict[str, dict[str, float]]:
+    totals: dict[str, dict[str, float]] = {}
+    for meal in meals:
+        key = meal.entry_date.isoformat()
+        day_total = totals.setdefault(
+            key,
+            {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0},
+        )
+        day_total["calories"] += meal.calories or 0
+        day_total["protein_g"] += meal.protein_g or 0
+        day_total["carbs_g"] += meal.carbs_g or 0
+        day_total["fat_g"] += meal.fat_g or 0
+    return {
+        key: {macro: round(value, 1) for macro, value in day_total.items()}
+        for key, day_total in totals.items()
+    }
+
+
+def _date_in_month(day_key: str, year: int, month: int) -> bool:
+    parsed = date.fromisoformat(day_key)
+    return parsed.year == year and parsed.month == month

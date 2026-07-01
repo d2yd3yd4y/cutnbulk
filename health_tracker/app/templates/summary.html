@@ -28,6 +28,14 @@
       <span>平均蛋白</span>
       <strong>{{ summary.average_protein if summary.average_protein is not none else "-" }} g</strong>
     </article>
+    <article class="summary-card">
+      <span>平均碳水</span>
+      <strong>{{ summary.average_carbs if summary.average_carbs is not none else "-" }} g</strong>
+    </article>
+    <article class="summary-card">
+      <span>平均脂肪</span>
+      <strong>{{ summary.average_fat if summary.average_fat is not none else "-" }} g</strong>
+    </article>
     <article class="summary-card wide">
       <span>训练天数</span>
       <strong>{{ summary.training_days }} 天</strong>
@@ -43,15 +51,17 @@
     <div class="section-title">
       <h2>最近记录</h2>
     </div>
-    {% if entries %}
+    {% if recent_days %}
       <div class="mobile-list">
-        {% for entry in entries %}
-          <a href="/day/{{ entry.entry_date.isoformat() }}" class="mobile-list-item">
+        {% for day_key in recent_days %}
+          {% set entry = entries_by_date.get(day_key) %}
+          {% set meal_total = meal_totals_by_date.get(day_key) %}
+          <a href="/day/{{ day_key }}" class="mobile-list-item">
             <div>
-              <strong>{{ entry.entry_date.strftime("%m.%d") }}</strong>
-              <span>{{ entry.training_parts.replace(",", "/") if entry.training_parts else "未记录训练" }}</span>
+              <strong>{{ day_key[5:].replace("-", ".") }}</strong>
+              <span>{{ entry.training_parts.replace(",", "/") if entry and entry.training_parts else "未记录训练" }}</span>
             </div>
-            <em>{{ entry.calories|round|int if entry.calories is not none else "-" }} kcal</em>
+            <em>{{ meal_total.calories|round|int if meal_total else "-" }} kcal</em>
           </a>
         {% endfor %}
       </div>

@@ -21,22 +21,23 @@
         {% for day in week %}
           {% set key = day.isoformat() %}
           {% set entry = entries_by_date.get(key) %}
+          {% set meal_total = meal_totals_by_date.get(key) %}
           <a
-            class="day-cell {% if day.month != first_day.month %}muted-day{% endif %} {% if day == today %}today{% endif %} {% if entry %}has-entry{% endif %}"
+            class="day-cell {% if day.month != first_day.month %}muted-day{% endif %} {% if day == today %}today{% endif %} {% if entry or meal_total %}has-entry{% endif %}"
             href="/day/{{ key }}"
             aria-label="查看 {{ key }} 的记录"
           >
             <div class="day-number">{{ day.day }}</div>
-            {% if entry %}
+            {% if entry or meal_total %}
               <div class="day-summary">
-                {% if entry.weight_kg is not none %}
+                {% if entry and entry.weight_kg is not none %}
                   <span class="weight-tag">{{ entry.weight_kg }}kg</span>
                 {% endif %}
-                {% if entry.training_parts %}
+                {% if entry and entry.training_parts %}
                   <span>{{ entry.training_parts.replace(",", "/") }}</span>
                 {% endif %}
-                {% if entry.calories is not none %}
-                  <span class="desktop-only">{{ entry.calories|round|int }} kcal</span>
+                {% if meal_total %}
+                  <span>{{ meal_total.calories|round|int }} kcal</span>
                 {% endif %}
               </div>
             {% endif %}

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
@@ -24,3 +24,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_sqlite_schema():
+    """Apply tiny local schema fixes for existing MVP SQLite databases."""
+    if engine.dialect.name != "sqlite":
+        return
+
+    with engine.begin() as connection:
+        meal_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(meal_entries)"))
+        }
+        if meal_columns and "meal_name" not in meal_columns:
+            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN meal_name VARCHAR(80)"))
