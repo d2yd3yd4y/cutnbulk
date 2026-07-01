@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   bindMealTemplates();
   bindWorkoutRows();
+  bindTrainingParts();
 });
 
 function bindMealTemplates() {
@@ -50,5 +51,23 @@ function refreshFailureIndexes(container) {
   container.querySelectorAll(".workout-row").forEach((row, index) => {
     const checkbox = row.querySelector('input[name="to_failure"]');
     if (checkbox) checkbox.value = String(index);
+  });
+}
+
+function bindTrainingParts() {
+  const inputs = Array.from(document.querySelectorAll('input[name="training_parts"]'));
+  if (!inputs.length) return;
+
+  inputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.value === "休息" && input.checked) {
+        inputs.forEach((item) => {
+          if (item.value !== "休息") item.checked = false;
+        });
+      } else if (input.checked) {
+        const rest = inputs.find((item) => item.value === "休息");
+        if (rest) rest.checked = false;
+      }
+    });
   });
 }

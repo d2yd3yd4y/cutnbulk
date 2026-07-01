@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}日历 · cutnbulk{% endblock %}
+
+{% block content %}
+<section class="calendar-shell">
+  <div class="calendar-header">
+    <div>
+      <p class="eyebrow">每日记录</p>
+      <h1>{{ first_day.year }} 年 {{ first_day.month }} 月</h1>
+    </div>
+    <div class="calendar-actions">
+      <a class="secondary-btn" href="/?year={{ prev_year }}&month={{ prev_month }}">上个月</a>
+      <a class="primary-btn" href="/day/{{ today.isoformat() }}">记录今天</a>
+      <a class="secondary-btn" href="/?year={{ next_year }}&month={{ next_month }}">下个月</a>
+    </div>
+  </div>
+
+  <div class="calendar-card">
+    <div class="weekday-row">
+      {% for weekday in weekdays %}
+        <span>{{ weekday }}</span>
+      {% endfor %}
+    </div>
+    <div class="calendar-grid">
+      {% for week in weeks %}
+        {% for day in week %}
+          {% set key = day.isoformat() %}
+          {% set entry = entries_by_date.get(key) %}
+          <a
+            class="day-cell {% if day.month != first_day.month %}muted-day{% endif %} {% if day == today %}today{% endif %} {% if entry %}has-entry{% endif %}"
+            href="/day/{{ key }}"
+            aria-label="查看 {{ key }} 的记录"
+          >
+            <div class="day-number">{{ day.day }}</div>
+            {% if entry %}
+              <div class="day-summary">
+                {% if entry.weight_kg is not none %}
+                  <span>{{ entry.weight_kg }}kg</span>
+                {% endif %}
+                {% if entry.training_parts %}
+                  <span>{{ entry.training_parts.replace(",", "/") }}</span>
+                {% endif %}
+                {% if entry.calories is not none %}
+                  <span>{{ entry.calories|round|int }} kcal</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="day-empty">添加</div>
+            {% endif %}
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

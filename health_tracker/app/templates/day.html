@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entry_date.strftime("%Y-%m-%d") }} · cutnbulk{% endblock %}
+
+{% block content %}
+<section class="day-page">
+  <div class="day-header">
+    <div>
+      <p class="eyebrow">每日记录</p>
+      <h1>{{ entry_date.strftime("%Y-%m-%d") }}</h1>
+    </div>
+    <div class="calendar-actions">
+      <a class="secondary-btn" href="/">返回日历</a>
+      {% if entry_date != today %}
+        <a class="primary-btn" href="/day/{{ today.isoformat() }}">记录今天</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if saved %}
+    <div class="save-banner">已保存</div>
+  {% endif %}
+
+  <form class="daily-form" action="/day/{{ entry_date.isoformat() }}" method="post" enctype="multipart/form-data">
+    <section class="record-section">
+      <div class="section-title">
+        <h2>身体</h2>
+      </div>
+      <div class="form-grid compact">
+        <label>
+          体重 kg
+          <input type="number" step="0.1" name="weight_kg" value="{{ entry.weight_kg if entry and entry.weight_kg is not none else '' }}" placeholder="72.4">
+        </label>
+        <label>
+          腰围 cm
+          <input type="number" step="0.1" name="waist_cm" value="{{ entry.waist_cm if entry and entry.waist_cm is not none else '' }}" placeholder="可选">
+        </label>
+        <label>
+          睡眠 小时
+          <input type="number" step="0.1" name="sleep_hours" value="{{ entry.sleep_hours if entry and entry.sleep_hours is not none else '' }}" placeholder="可选">
+        </label>
+        <label>
+          疲劳感 1-10
+          <input type="number" min="1" max="10" name="fatigue_level" value="{{ entry.fatigue_level if entry and entry.fatigue_level is not none else '' }}" placeholder="可选">
+        </label>
+      </div>
+    </section>
+
+    <section class="record-section">
+      <div class="section-title">
+        <h2>训练</h2>
+      </div>
+      <div class="part-options">
+        {% for part in training_parts %}
+          <label class="part-chip">
+            <input type="checkbox" name="training_parts" value="{{ part }}" {% if part in selected_parts %}checked{% endif %}>
+            <span>{{ part }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <label class="stacked-field">
+        训练备注
+        <textarea name="training_notes" rows="3" placeholder="例如：卧推 4 组，飞鸟 3 组，状态一般">{{ entry.training_notes if entry and entry.training_notes else '' }}</textarea>
+      </label>
+    </section>
+
+    <section class="record-section">
+      <div class="section-title">
+        <h2>饮食</h2>
+        <span>营养数据留空会自动估算</span>
+      </div>
+      <label class="stacked-field">
+        今日饮食描述
+        <textarea name="food_description" rows="4" placeholder="例如：早餐鸡蛋牛奶，午餐牛肉饭，晚餐鸡胸肉沙拉">{{ entry.food_description if entry and entry.food_description else '' }}</textarea>
+      </label>
+      <div class="form-grid compact">
+        <label>
+          总热量 kcal
+          <input type="number" step="0.1" name="calories" value="{{ entry.calories if entry and entry.calories is not none else '' }}" placeholder="自动估算">
+        </label>
+        <label>
+          蛋白质 g
+          <input type="number" step="0.1" name="protein_g" value="{{ entry.protein_g if entry and entry.protein_g is not none else '' }}" placeholder="自动估算">
+        </label>
+        <label>
+          碳水 g
+          <input type="number" step="0.1" name="carbs_g" value="{{ entry.carbs_g if entry and entry.carbs_g is not none else '' }}" placeholder="自动估算">
+        </label>
+        <label>
+          脂肪 g
+          <input type="number" step="0.1" name="fat_g" value="{{ entry.fat_g if entry and entry.fat_g is not none else '' }}" placeholder="自动估算">
+        </label>
+      </div>
+      <div class="image-row">
+        <label>
+          食物照片
+          <input type="file" name="image" accept="image/*">
+        </label>
+        {% if entry and entry.image_path %}
+          <a class="food-thumb" href="{{ entry.image_path }}" target="_blank">
+            <img src="{{ entry.image_path }}" alt="食物照片">
+          </a>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="record-section">
+      <label class="stacked-field">
+        今日备注
+        <textarea name="daily_note" rows="3" placeholder="状态、心情、外食、特殊情况">{{ entry.daily_note if entry and entry.daily_note else '' }}</textarea>
+      </label>
+    </section>
+
+    <div class="sticky-submit">
+      <button class="primary-btn large" type="submit">保存这一天</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

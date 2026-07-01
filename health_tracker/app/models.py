@@ -58,3 +58,23 @@ class BodyMetric(TimestampMixin, Base):
     sleep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     fatigue_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class DailyEntry(TimestampMixin, Base):
+    __tablename__ = "daily_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    entry_date: Mapped[date] = mapped_column(Date, index=True, unique=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    waist_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sleep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fatigue_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    training_parts: Mapped[str | None] = mapped_column(Text, nullable=True)
+    training_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    food_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    calories: Mapped[float | None] = mapped_column(Float, nullable=True)
+    protein_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    carbs_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fat_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    daily_note: Mapped[str | None] = mapped_column(Text, nullable=True)

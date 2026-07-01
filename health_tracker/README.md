@@ -1,14 +1,14 @@
-# 饮食 + 训练 + 身体数据记录本地 Web App MVP
+# cutnbulk 本地健身饮食日历
 
-这是一个个人使用的健康记录 MVP，使用 FastAPI + Jinja2 + SQLite 构建，可在本地浏览器运行。
+这是一个个人使用的极简健身饮食记录 App，使用 FastAPI + Jinja2 + SQLite 构建，可在本地浏览器运行。
 
 ## 功能
 
-- 首页 Dashboard：今日热量、三大营养素、训练量、最近身体数据和每日建议
-- 饮食记录：早餐、午餐、晚餐、加餐，支持文字描述、食物照片、快速模板和营养估算
-- 训练记录：支持一次添加多条动作，记录组数、次数、重量、RPE、是否接近力竭
-- 身体数据：记录体重、腰围、睡眠、疲劳感和备注
-- 周复盘：基于最近 7 天数据生成中文总结和调整建议
+- 首页日历：按月查看每日记录摘要
+- 每日记录：体重、腰围、睡眠、疲劳感
+- 训练记录：用训练部位 + 训练备注快速记录
+- 饮食记录：饮食描述、总热量、蛋白质、碳水、脂肪、食物照片
+- 本地 mock 饮食估算：营养数据留空时按描述和图片做估算
 
 ## 技术栈
 
@@ -36,6 +36,12 @@ uvicorn main:app --reload
 ```text
 http://127.0.0.1:8000
 ```
+
+核心页面：
+
+- `/`：当月日历
+- `/today`：跳转到今天
+- `/day/YYYY-MM-DD`：某一天的记录页，例如 `/day/2026-07-01`
 
 ## 数据库和上传文件
 
@@ -71,6 +77,8 @@ health_tracker/
       insight_service.py
       weekly_review_service.py
     routers/
+      calendar.py
+      day.py
       dashboard.py
       meals.py
       workouts.py
@@ -78,6 +86,8 @@ health_tracker/
       weekly.py
     templates/
       base.html
+      calendar.html
+      day.html
       dashboard.html
       meals.html
       workouts.html
