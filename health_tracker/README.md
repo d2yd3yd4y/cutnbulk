@@ -42,6 +42,17 @@ http://127.0.0.1:8000
 - `/`：当月日历
 - `/today`：跳转到今天
 - `/day/YYYY-MM-DD`：某一天的记录页，例如 `/day/2026-07-01`
+- `/summary`：最近 7 天趋势
+
+## 手机端预览
+
+当前 UI 以手机竖屏优先，桌面端打开时会居中显示为接近手机 App 的宽度。
+
+在浏览器开发者工具中可以用这些宽度预览：
+
+- 375px
+- 390px
+- 430px
 
 ## 数据库和上传文件
 
@@ -94,6 +105,8 @@ health_tracker/
       body.html
       weekly.html
     static/
+      images/
+        logo.png
       styles.css
       app.js
     uploads/
