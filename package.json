@@ -1,0 +1,13 @@
+{
+  "name": "cutnbulk-nutrition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "nutrition:demo": "tsx src/nutrition/demo.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.5",
+    "typescript": "^6.0.3"
+  }
+}

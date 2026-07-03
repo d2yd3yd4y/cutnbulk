@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+node_modules/
 
 health_tracker/health_tracker.db
 health_tracker/app/uploads/*
