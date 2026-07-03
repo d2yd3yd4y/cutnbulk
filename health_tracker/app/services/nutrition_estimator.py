@@ -166,17 +166,12 @@ def estimate_portion_grams(text: str, start: int, end: int, item: FoodItem) -> t
 
 
 def _parse_explicit_grams(before: str, after: str) -> float | None:
-    patterns = [
-        r"(\d+(?:\.\d+)?)\s*(?:g|克)$",
-        r"(\d+(?:\.\d+)?)\s*(?:g|克)",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, before)
-        if match:
-            return float(match.group(1))
-        match = re.search(pattern, after)
-        if match:
-            return float(match.group(1))
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:g|克)\s*$", before)
+    if match:
+        return float(match.group(1))
+    match = re.search(r"^\s*(\d+(?:\.\d+)?)\s*(?:g|克)(?:\s|$)", after)
+    if match:
+        return float(match.group(1))
     return None
 
 
