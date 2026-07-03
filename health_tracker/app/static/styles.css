@@ -869,6 +869,44 @@ input[type="range"] {
   line-height: 1.45;
 }
 
+.estimate-details {
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.estimate-details summary {
+  padding: 9px 10px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.estimate-details p {
+  margin: 0;
+  padding: 0 10px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.matched-foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+
+.matched-foods span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .meal-actions {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1026,6 +1064,74 @@ input[type="range"] {
   border-radius: 10px;
   background: var(--surface-soft);
   color: var(--muted);
+}
+
+.foods-page,
+.food-form {
+  display: grid;
+  gap: 14px;
+}
+
+.food-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.food-list {
+  display: grid;
+  gap: 10px;
+}
+
+.food-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.food-card span,
+.food-card small,
+.food-card p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.food-card h2 {
+  margin-top: 5px;
+  font-size: 18px;
+}
+
+.food-card p {
+  margin: 0;
+}
+
+.food-macros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.food-macros strong,
+.food-macros span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.food-macros strong {
+  background: var(--primary);
+  color: #fff;
+}
+
+.food-macros span {
+  background: var(--surface-soft);
+  color: var(--primary-dark);
 }
 
 /* Legacy pages are still reachable, but not part of the mobile-first nav. */

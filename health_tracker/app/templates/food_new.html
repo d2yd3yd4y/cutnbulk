@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}新增食物 · cutnbulk{% endblock %}
+
+{% block content %}
+<section class="foods-page">
+  <div class="mobile-page-header">
+    <a class="text-link" href="/foods">返回</a>
+    <div>
+      <h1>新增食物</h1>
+      <span>添加后可用于自动估算</span>
+    </div>
+    <span></span>
+  </div>
+
+  {% if error %}
+    <div class="error-banner">{{ error }}</div>
+  {% endif %}
+
+  <form class="food-form" action="/foods/new" method="post">
+    <section class="record-section">
+      <div class="form-grid compact">
+        <label class="full-width">
+          名称
+          <input type="text" name="name" required value="{{ form_values.get('name', '') }}" placeholder="自制鸡胸饭">
+        </label>
+        <label class="full-width">
+          别名
+          <input type="text" name="aliases" value="{{ form_values.get('aliases', '') }}" placeholder="逗号分隔，例如 鸡胸饭,健身餐">
+        </label>
+        <label>
+          分类
+          <input type="text" name="category" value="{{ form_values.get('category', '自定义') }}" placeholder="自定义">
+        </label>
+        <label>
+          菜系/地区
+          <input type="text" name="cuisine" value="{{ form_values.get('cuisine', '自定义') }}" placeholder="中国">
+        </label>
+        <label>
+          常见份量
+          <input type="text" name="serving_desc" value="{{ form_values.get('serving_desc', '一份') }}" placeholder="一份">
+        </label>
+        <label>
+          份量克数
+          <input type="number" inputmode="decimal" step="0.1" name="serving_grams" value="{{ form_values.get('serving_grams', '100') }}" placeholder="100">
+        </label>
+      </div>
+    </section>
+
+    <section class="record-section">
+      <div class="section-title">
+        <h2>每 100g 营养</h2>
+      </div>
+      <div class="form-grid compact">
+        <label>
+          热量 kcal
+          <input type="number" inputmode="decimal" step="0.1" name="calories_per_100g" required value="{{ form_values.get('calories_per_100g', '') }}">
+        </label>
+        <label>
+          蛋白质 g
+          <input type="number" inputmode="decimal" step="0.1" name="protein_per_100g" required value="{{ form_values.get('protein_per_100g', '') }}">
+        </label>
+        <label>
+          碳水 g
+          <input type="number" inputmode="decimal" step="0.1" name="carbs_per_100g" required value="{{ form_values.get('carbs_per_100g', '') }}">
+        </label>
+        <label>
+          脂肪 g
+          <input type="number" inputmode="decimal" step="0.1" name="fat_per_100g" required value="{{ form_values.get('fat_per_100g', '') }}">
+        </label>
+      </div>
+      <label class="stacked-field">
+        备注
+        <textarea name="notes" rows="3" placeholder="例如：按自制常见份量估算">{{ form_values.get('notes', '') }}</textarea>
+      </label>
+    </section>
+
+    <button class="primary-btn large" type="submit">保存食物</button>
+  </form>
+</section>
+{% endblock %}

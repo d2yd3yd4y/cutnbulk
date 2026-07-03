@@ -8,9 +8,9 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import DailyEntry, MealEntry
-from app.services.food_ai_service import estimate_food_nutrition
+from app.models import DailyEntry, MealEntry, MealFoodMatch
 from app.services.goal_service import get_goal_progress_for_day
+from app.services.nutrition_estimator import NutritionEstimateResult, estimate_meal_nutrition
 
 
 router = APIRouter(prefix="/day", tags=["day"])
@@ -49,6 +49,15 @@ def day_page(
         .order_by(MealEntry.created_at.asc(), MealEntry.id.asc())
         .all()
     )
+    meal_matches = (
+        db.query(MealFoodMatch)
+        .filter(MealFoodMatch.meal_entry_id.in_([meal.id for meal in meals] or [0]))
+        .order_by(MealFoodMatch.id.asc())
+        .all()
+    )
+    matches_by_meal: dict[int, list[MealFoodMatch]] = {}
+    for match in meal_matches:
+        matches_by_meal.setdefault(match.meal_entry_id, []).append(match)
     selected_parts = _split_training_parts(entry.training_parts if entry else None)
     return templates.TemplateResponse(
         name="day.html",
@@ -63,6 +72,7 @@ def day_page(
             "selected_parts": selected_parts,
             "meals": meals,
             "meal_totals": _meal_totals(meals),
+            "matches_by_meal": matches_by_meal,
             "goal_progress": get_goal_progress_for_day(db, target_date),
             "meal_types": MEAL_TYPES,
             "meal_type_labels": MEAL_TYPE_LABELS,
@@ -107,7 +117,7 @@ async def save_day(
     should_estimate = description and any(
         not value.strip() for value in [calories, protein_g, carbs_g, fat_g]
     )
-    estimate = estimate_food_nutrition(description, entry.image_path) if should_estimate else None
+    estimate = estimate_meal_nutrition(db, description, entry.image_path) if should_estimate else None
 
     entry.weight_kg = _parse_float(weight_kg)
     entry.waist_cm = _parse_float(waist_cm)
@@ -146,7 +156,8 @@ async def create_meal(
 
     image_path = await _save_upload(image)
     meal = MealEntry(entry_date=target_date)
-    _apply_meal_form(
+    estimate = _apply_meal_form(
+        db=db,
         meal=meal,
         meal_type=meal_type,
         meal_name=meal_name,
@@ -159,6 +170,8 @@ async def create_meal(
         image_path=image_path,
     )
     db.add(meal)
+    db.flush()
+    _sync_meal_matches(db, meal, estimate)
     db.commit()
     return RedirectResponse(url=f"/day/{target_date.isoformat()}?saved=1", status_code=303)
 
@@ -191,7 +204,8 @@ async def update_meal(
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
     image_path = await _save_upload(image)
-    _apply_meal_form(
+    estimate = _apply_meal_form(
+        db=db,
         meal=meal,
         meal_type=meal_type,
         meal_name=meal_name,
@@ -203,6 +217,7 @@ async def update_meal(
         notes=notes,
         image_path=image_path,
     )
+    _sync_meal_matches(db, meal, estimate)
     db.commit()
     return RedirectResponse(url=f"/day/{target_date.isoformat()}?saved=1", status_code=303)
 
@@ -251,6 +266,7 @@ def _meal_totals(meals: list[MealEntry]) -> dict[str, float]:
 
 
 def _apply_meal_form(
+    db: Session,
     meal: MealEntry,
     meal_type: str,
     meal_name: str,
@@ -263,7 +279,7 @@ def _apply_meal_form(
     image_path: str | None,
 ):
     clean_description = description.strip()
-    estimate = estimate_food_nutrition(clean_description, image_path or meal.image_path)
+    estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
 
     meal.meal_type = meal_type if meal_type in MEAL_TYPE_LABELS else "custom"
     meal.meal_name = meal_name.strip() or None
@@ -274,7 +290,28 @@ def _apply_meal_form(
     meal.protein_g = _parse_float(protein_g, estimate.protein_g) or 0
     meal.carbs_g = _parse_float(carbs_g, estimate.carbs_g) or 0
     meal.fat_g = _parse_float(fat_g, estimate.fat_g) or 0
+    meal.estimate_confidence = estimate.confidence
+    meal.estimate_reasoning = estimate.reasoning
     meal.notes = notes.strip() or None
+    return estimate
+
+
+def _sync_meal_matches(db: Session, meal: MealEntry, estimate: NutritionEstimateResult):
+    db.query(MealFoodMatch).filter(MealFoodMatch.meal_entry_id == meal.id).delete()
+    for match in estimate.matched_foods:
+        db.add(
+            MealFoodMatch(
+                meal_entry_id=meal.id,
+                food_item_id=match.food_item_id,
+                matched_text=match.matched_text,
+                estimated_grams=match.estimated_grams,
+                calories=match.calories,
+                protein_g=match.protein_g,
+                carbs_g=match.carbs_g,
+                fat_g=match.fat_g,
+                confidence=match.confidence,
+            )
+        )
 
 
 async def _save_upload(image: UploadFile | None) -> str | None:

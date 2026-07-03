@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -28,7 +28,47 @@ class MealEntry(TimestampMixin, Base):
     protein_g: Mapped[float] = mapped_column(Float, default=0)
     carbs_g: Mapped[float] = mapped_column(Float, default=0)
     fat_g: Mapped[float] = mapped_column(Float, default=0)
+    estimate_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    estimate_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class FoodItem(TimestampMixin, Base):
+    __tablename__ = "food_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(120), index=True)
+    normalized_name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    aliases: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    cuisine: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    serving_desc: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    serving_grams: Mapped[float | None] = mapped_column(Float, nullable=True)
+    calories_per_100g: Mapped[float] = mapped_column(Float)
+    protein_per_100g: Mapped[float] = mapped_column(Float)
+    carbs_per_100g: Mapped[float] = mapped_column(Float)
+    fat_per_100g: Mapped[float] = mapped_column(Float)
+    fiber_per_100g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sodium_per_100g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(String(80), default="seed/manual")
+    confidence: Mapped[float] = mapped_column(Float, default=0.7)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class MealFoodMatch(Base):
+    __tablename__ = "meal_food_matches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    meal_entry_id: Mapped[int] = mapped_column(ForeignKey("meal_entries.id"), index=True)
+    food_item_id: Mapped[int | None] = mapped_column(ForeignKey("food_items.id"), nullable=True)
+    matched_text: Mapped[str] = mapped_column(String(120))
+    estimated_grams: Mapped[float] = mapped_column(Float)
+    calories: Mapped[float] = mapped_column(Float)
+    protein_g: Mapped[float] = mapped_column(Float)
+    carbs_g: Mapped[float] = mapped_column(Float)
+    fat_g: Mapped[float] = mapped_column(Float)
+    confidence: Mapped[float] = mapped_column(Float, default=0.7)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class WorkoutEntry(TimestampMixin, Base):

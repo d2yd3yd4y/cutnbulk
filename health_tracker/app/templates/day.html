@@ -130,6 +130,27 @@
               <span>碳水 {{ meal.carbs_g }}g</span>
               <span>脂肪 {{ meal.fat_g }}g</span>
             </div>
+            {% if meal.estimate_confidence is not none or meal.estimate_reasoning %}
+              <details class="estimate-details">
+                <summary>
+                  估算依据
+                  {% if meal.estimate_confidence is not none %}
+                    · 可信度 {{ (meal.estimate_confidence * 100)|round|int }}%
+                  {% endif %}
+                </summary>
+                {% if meal.estimate_reasoning %}
+                  <p>{{ meal.estimate_reasoning }}</p>
+                {% endif %}
+                {% set matches = matches_by_meal.get(meal.id, []) %}
+                {% if matches %}
+                  <div class="matched-foods">
+                    {% for match in matches %}
+                      <span>{{ match.matched_text }} · {{ match.estimated_grams }}g · {{ match.calories|round|int }} kcal</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </details>
+            {% endif %}
             {% if meal.notes %}
               <p class="meal-note">{{ meal.notes }}</p>
             {% endif %}

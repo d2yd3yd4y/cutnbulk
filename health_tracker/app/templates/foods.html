@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}食物库 · cutnbulk{% endblock %}
+
+{% block content %}
+<section class="foods-page">
+  <div class="mobile-page-header single">
+    <div>
+      <h1>食物库</h1>
+      <span>已收录 {{ total_count }} 个食物</span>
+    </div>
+  </div>
+
+  <form class="food-search" action="/foods" method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜索：米饭、鸡胸肉、黄焖鸡">
+    <button class="secondary-btn" type="submit">搜索</button>
+  </form>
+
+  <a class="primary-btn full-width" href="/foods/new">新增自定义食物</a>
+
+  <div class="food-list">
+    {% for food in foods %}
+      <article class="food-card">
+        <div>
+          <span>{{ food.category or "未分类" }} · {{ food.cuisine or "通用" }}</span>
+          <h2>{{ food.name }}</h2>
+          <small>{{ food.serving_desc or "100g" }} ≈ {{ food.serving_grams or 100 }}g · 可信度 {{ (food.confidence * 100)|round|int }}%</small>
+        </div>
+        <div class="food-macros">
+          <strong>{{ food.calories_per_100g|round|int }} kcal/100g</strong>
+          <span>蛋白 {{ food.protein_per_100g }}g</span>
+          <span>碳水 {{ food.carbs_per_100g }}g</span>
+          <span>脂肪 {{ food.fat_per_100g }}g</span>
+        </div>
+        {% if food.notes %}
+          <p>{{ food.notes }}</p>
+        {% endif %}
+      </article>
+    {% else %}
+      <p class="empty">没有找到食物，可以新增一个。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
