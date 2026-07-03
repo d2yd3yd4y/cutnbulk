@@ -116,6 +116,11 @@
                 <span class="meal-label">
                   {{ meal.meal_name if meal.meal_type == "custom" and meal.meal_name else meal_type_labels.get(meal.meal_type, meal.meal_type) }}
                 </span>
+                {% if meal.estimate_source == "vision_ai" %}
+                  <span class="ai-label">AI 估算</span>
+                {% elif meal.estimate_source == "fallback" %}
+                  <span class="fallback-label">本地估算</span>
+                {% endif %}
                 <h3>{{ meal.description }}</h3>
               </div>
               {% if meal.image_path %}
@@ -140,6 +145,19 @@
                 </summary>
                 {% if meal.estimate_reasoning %}
                   <p>{{ meal.estimate_reasoning }}</p>
+                {% endif %}
+                {% if meal.calorie_range_low is not none and meal.calorie_range_high is not none %}
+                  <div class="estimate-range">
+                    热量区间：{{ meal.calorie_range_low|round|int }}–{{ meal.calorie_range_high|round|int }} kcal
+                  </div>
+                {% endif %}
+                {% set uncertainty_factors = uncertainty_by_meal.get(meal.id, []) %}
+                {% if uncertainty_factors %}
+                  <div class="uncertainty-list">
+                    {% for factor in uncertainty_factors %}
+                      <span>{{ factor }}</span>
+                    {% endfor %}
+                  </div>
                 {% endif %}
                 {% set matches = matches_by_meal.get(meal.id, []) %}
                 {% if matches %}

@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -11,6 +12,7 @@ from app.database import get_db
 from app.models import DailyEntry, MealEntry, MealFoodMatch
 from app.services.goal_service import get_goal_progress_for_day
 from app.services.nutrition_estimator import NutritionEstimateResult, estimate_meal_nutrition
+from app.services.vision_food_estimator import estimate_food_from_image
 
 
 router = APIRouter(prefix="/day", tags=["day"])
@@ -58,6 +60,9 @@ def day_page(
     matches_by_meal: dict[int, list[MealFoodMatch]] = {}
     for match in meal_matches:
         matches_by_meal.setdefault(match.meal_entry_id, []).append(match)
+    uncertainty_by_meal = {
+        meal.id: _parse_uncertainty_factors(meal.uncertainty_factors) for meal in meals
+    }
     selected_parts = _split_training_parts(entry.training_parts if entry else None)
     return templates.TemplateResponse(
         name="day.html",
@@ -73,6 +78,7 @@ def day_page(
             "meals": meals,
             "meal_totals": _meal_totals(meals),
             "matches_by_meal": matches_by_meal,
+            "uncertainty_by_meal": uncertainty_by_meal,
             "goal_progress": get_goal_progress_for_day(db, target_date),
             "meal_types": MEAL_TYPES,
             "meal_type_labels": MEAL_TYPE_LABELS,
@@ -168,6 +174,7 @@ async def create_meal(
         fat_g=fat_g,
         notes=notes,
         image_path=image_path,
+        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
     )
     db.add(meal)
     db.flush()
@@ -216,6 +223,7 @@ async def update_meal(
         fat_g=fat_g,
         notes=notes,
         image_path=image_path,
+        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
     )
     _sync_meal_matches(db, meal, estimate)
     db.commit()
@@ -277,9 +285,13 @@ def _apply_meal_form(
     fat_g: str,
     notes: str,
     image_path: str | None,
+    prefer_vision: bool = False,
 ):
     clean_description = description.strip()
-    estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
+    if prefer_vision:
+        estimate = estimate_food_from_image(db, image_path or meal.image_path, clean_description)
+    else:
+        estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
 
     meal.meal_type = meal_type if meal_type in MEAL_TYPE_LABELS else "custom"
     meal.meal_name = meal_name.strip() or None
@@ -292,6 +304,10 @@ def _apply_meal_form(
     meal.fat_g = _parse_float(fat_g, estimate.fat_g) or 0
     meal.estimate_confidence = estimate.confidence
     meal.estimate_reasoning = estimate.reasoning
+    meal.estimate_source = estimate.source
+    meal.calorie_range_low = estimate.calorie_range_low
+    meal.calorie_range_high = estimate.calorie_range_high
+    meal.uncertainty_factors = json.dumps(estimate.uncertainty_factors or [], ensure_ascii=False)
     meal.notes = notes.strip() or None
     return estimate
 
@@ -332,6 +348,20 @@ def _parse_float(value: str, default: float | None = None) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _has_manual_nutrition(*values: str) -> bool:
+    return any(value.strip() for value in values)
+
+
+def _parse_uncertainty_factors(value: str | None) -> list[str]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
 
 
 def _parse_int(value: str) -> int | None:
