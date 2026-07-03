@@ -24,9 +24,9 @@
       </div>
       <div class="segmented">
         {% for key, label in mode_labels.items() %}
-          <label>
-            <input type="radio" name="mode" value="{{ key }}" {% if selected_mode == key %}checked{% endif %}>
-            <span>{{ label }}</span>
+          <label class="choice-option">
+            <input class="choice-input" type="radio" name="mode" value="{{ key }}" {% if selected_mode == key %}checked{% endif %}>
+            <span class="choice-label">{{ label }}</span>
           </label>
         {% endfor %}
       </div>
@@ -62,9 +62,9 @@
       </div>
       <div class="activity-options">
         {% for key, label in activity_labels.items() %}
-          <label>
-            <input type="radio" name="activity_level" value="{{ key }}" {% if selected_activity == key %}checked{% endif %}>
-            <span>{{ label }}</span>
+          <label class="choice-option">
+            <input class="choice-input" type="radio" name="activity_level" value="{{ key }}" {% if selected_activity == key %}checked{% endif %}>
+            <span class="choice-label">{{ label }}</span>
           </label>
         {% endfor %}
       </div>
