@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import DailyEntry, MealEntry
+from app.services.goal_service import MODE_LABELS, get_active_goal, get_goal_progress_for_day
 
 
 router = APIRouter(tags=["calendar"])
@@ -87,6 +88,8 @@ def calendar_page(
         "average_calories": _avg(calories),
         "training_days": training_days,
     }
+    active_goal = get_active_goal(db)
+    today_goal_progress = get_goal_progress_for_day(db, today)
 
     return templates.TemplateResponse(
         name="calendar.html",
@@ -104,6 +107,9 @@ def calendar_page(
             "next_year": next_year,
             "next_month": next_month,
             "month_summary": month_summary,
+            "active_goal": active_goal,
+            "today_goal_progress": today_goal_progress,
+            "mode_labels": MODE_LABELS,
             "active_page": "calendar",
         },
     )

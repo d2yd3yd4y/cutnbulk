@@ -17,6 +17,27 @@
     <div class="save-banner">已保存</div>
   {% endif %}
 
+  <div class="goal-progress-card">
+    {% if goal_progress.goal %}
+      <div>
+        <span>今日建议摄入</span>
+        <strong>{{ goal_progress.recommended_calories|round|int }} kcal</strong>
+      </div>
+      <div class="goal-progress-row">
+        <span>已摄入 {{ goal_progress.consumed_calories|round|int }} kcal</span>
+        {% if goal_progress.remaining_calories is not none %}
+          <strong class="{% if goal_progress.is_over %}over{% endif %}">
+            {{ "超出" if goal_progress.is_over else "剩余" }}
+            {{ goal_progress.remaining_calories|abs|round|int }} kcal
+          </strong>
+        {% endif %}
+      </div>
+    {% else %}
+      <span>设置目标后会显示每日建议摄入。</span>
+      <a href="/goal">去设置</a>
+    {% endif %}
+  </div>
+
   <form class="daily-form" action="/day/{{ entry_date.isoformat() }}" method="post">
     <section class="record-section">
       <div class="section-title">
@@ -26,10 +47,6 @@
         <label>
           体重 kg
           <input type="number" inputmode="decimal" step="0.1" name="weight_kg" value="{{ entry.weight_kg if entry and entry.weight_kg is not none else '' }}" placeholder="72.4">
-        </label>
-        <label>
-          腰围 cm
-          <input type="number" inputmode="decimal" step="0.1" name="waist_cm" value="{{ entry.waist_cm if entry and entry.waist_cm is not none else '' }}" placeholder="可选">
         </label>
         <label>
           睡眠 小时

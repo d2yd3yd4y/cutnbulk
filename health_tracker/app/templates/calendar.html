@@ -4,6 +4,37 @@
 
 {% block content %}
 <section class="calendar-shell">
+  <div class="goal-card">
+    <div class="section-title compact-title">
+      <h2>当前目标</h2>
+      <a href="/goal">{{ "修改目标" if active_goal else "设置目标" }}</a>
+    </div>
+    {% if active_goal %}
+      <div class="goal-main">
+        <span>{{ mode_labels.get(active_goal.mode, active_goal.mode) }}</span>
+        <strong>{{ active_goal.recommended_calories|round|int }} kcal</strong>
+      </div>
+      <div class="goal-meta">
+        <span>{{ active_goal.current_weight_kg }}kg → {{ active_goal.target_weight_kg }}kg</span>
+        <span>{{ active_goal.target_days }} 天</span>
+        <span>{{ "%+d"|format(active_goal.daily_energy_delta|round|int) }} kcal/天</span>
+        <span>{{ active_goal.weekly_weight_change }} kg/week</span>
+      </div>
+      <div class="goal-progress-mini">
+        <span>今天已摄入 {{ today_goal_progress.consumed_calories|round|int }} kcal</span>
+        {% if today_goal_progress.remaining_calories is not none %}
+          <strong class="{% if today_goal_progress.is_over %}over{% endif %}">
+            {{ "超出" if today_goal_progress.is_over else "剩余" }}
+            {{ today_goal_progress.remaining_calories|abs|round|int }} kcal
+          </strong>
+        {% endif %}
+      </div>
+      <p>{{ active_goal.note }}</p>
+    {% else %}
+      <p>设置目标后，会在这里显示每日建议摄入和今天进度。</p>
+    {% endif %}
+  </div>
+
   <div class="month-bar">
     <a class="icon-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="上个月">‹</a>
     <h1>{{ first_day.year }} 年 {{ first_day.month }} 月</h1>

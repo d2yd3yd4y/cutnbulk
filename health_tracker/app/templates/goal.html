@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}设置目标 · cutnbulk{% endblock %}
+
+{% block content %}
+{% set selected_mode = form_values.get("mode") or (goal.mode if goal else "cut") %}
+{% set selected_activity = form_values.get("activity_level") or (goal.activity_level if goal else "moderate") %}
+<section class="goal-page">
+  <div class="mobile-page-header single">
+    <div>
+      <h1>设置目标</h1>
+      <span>根据体重目标估算每日建议摄入</span>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="error-banner">{{ error }}</div>
+  {% endif %}
+
+  <form class="goal-form" action="/goal" method="post">
+    <section class="record-section">
+      <div class="section-title">
+        <h2>当前阶段</h2>
+      </div>
+      <div class="segmented">
+        {% for key, label in mode_labels.items() %}
+          <label>
+            <input type="radio" name="mode" value="{{ key }}" {% if selected_mode == key %}checked{% endif %}>
+            <span>{{ label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="record-section">
+      <div class="section-title">
+        <h2>体重目标</h2>
+      </div>
+      <div class="form-grid compact">
+        <label>
+          当前体重 kg
+          <input type="number" inputmode="decimal" step="0.1" name="current_weight_kg" required value="{{ form_values.get('current_weight_kg') or (goal.current_weight_kg if goal else '') }}" placeholder="80">
+        </label>
+        <label>
+          目标体重 kg
+          <input type="number" inputmode="decimal" step="0.1" name="target_weight_kg" required value="{{ form_values.get('target_weight_kg') or (goal.target_weight_kg if goal else '') }}" placeholder="75">
+        </label>
+        <label>
+          目标天数
+          <input type="number" inputmode="numeric" min="1" name="target_days" required value="{{ form_values.get('target_days') or (goal.target_days if goal else '70') }}" placeholder="70">
+        </label>
+        <label>
+          维持热量 kcal
+          <input type="number" inputmode="decimal" step="1" name="maintenance_calories" value="{{ form_values.get('maintenance_calories') or '' }}" placeholder="不知道就留空">
+        </label>
+      </div>
+    </section>
+
+    <section class="record-section">
+      <div class="section-title">
+        <h2>活动水平</h2>
+      </div>
+      <div class="activity-options">
+        {% for key, label in activity_labels.items() %}
+          <label>
+            <input type="radio" name="activity_level" value="{{ key }}" {% if selected_activity == key %}checked{% endif %}>
+            <span>{{ label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <button class="primary-btn large" type="submit">保存目标</button>
+  </form>
+</section>
+{% endblock %}

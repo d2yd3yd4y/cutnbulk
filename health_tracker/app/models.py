@@ -79,3 +79,20 @@ class DailyEntry(TimestampMixin, Base):
     carbs_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     fat_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     daily_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GoalSetting(TimestampMixin, Base):
+    __tablename__ = "goal_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    mode: Mapped[str] = mapped_column(String(20), index=True)
+    current_weight_kg: Mapped[float] = mapped_column(Float)
+    target_weight_kg: Mapped[float] = mapped_column(Float)
+    target_days: Mapped[int] = mapped_column(Integer)
+    activity_level: Mapped[str] = mapped_column(String(20), default="moderate")
+    maintenance_calories: Mapped[float] = mapped_column(Float)
+    recommended_calories: Mapped[float] = mapped_column(Float)
+    daily_energy_delta: Mapped[float] = mapped_column(Float)
+    weekly_weight_change: Mapped[float] = mapped_column(Float)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)

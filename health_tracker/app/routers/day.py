@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DailyEntry, MealEntry
 from app.services.food_ai_service import estimate_food_nutrition
+from app.services.goal_service import get_goal_progress_for_day
 
 
 router = APIRouter(prefix="/day", tags=["day"])
@@ -62,6 +63,7 @@ def day_page(
             "selected_parts": selected_parts,
             "meals": meals,
             "meal_totals": _meal_totals(meals),
+            "goal_progress": get_goal_progress_for_day(db, target_date),
             "meal_types": MEAL_TYPES,
             "meal_type_labels": MEAL_TYPE_LABELS,
             "saved": saved,

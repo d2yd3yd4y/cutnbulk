@@ -214,7 +214,9 @@ h2 {
 .overview-card,
 .record-section,
 .summary-card,
-.advice-card {
+.advice-card,
+.goal-card,
+.goal-progress-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -321,8 +323,144 @@ h2 {
 }
 
 .overview-card,
+.goal-card,
+.goal-progress-card,
 .record-section {
   padding: 14px;
+}
+
+.goal-card {
+  display: grid;
+  gap: 10px;
+}
+
+.goal-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.goal-main,
+.goal-progress-mini,
+.goal-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-main span,
+.goal-progress-mini span,
+.goal-progress-row span,
+.goal-progress-card > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.goal-main strong,
+.goal-progress-card strong {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+}
+
+.goal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.goal-meta span,
+.goal-progress-mini strong,
+.goal-progress-row strong {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.goal-progress-mini strong.over,
+.goal-progress-row strong.over {
+  background: var(--danger-soft);
+  color: #9a4a1f;
+}
+
+.goal-progress-card {
+  display: grid;
+  gap: 9px;
+  background: #fbfcfa;
+}
+
+.goal-progress-card a {
+  color: var(--primary-dark);
+  font-weight: 900;
+}
+
+.goal-page,
+.goal-form {
+  display: grid;
+  gap: 14px;
+}
+
+.segmented,
+.activity-options {
+  display: grid;
+  gap: 9px;
+}
+
+.segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.activity-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmented label,
+.activity-options label {
+  display: block;
+}
+
+.segmented input,
+.activity-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.segmented span,
+.activity-options span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 900;
+}
+
+.segmented input:checked + span,
+.activity-options input:checked + span {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.error-banner {
+  padding: 12px 14px;
+  border: 1px solid #f2c9b2;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: #9a4a1f;
+  font-weight: 850;
+  line-height: 1.45;
 }
 
 .compact-title {
