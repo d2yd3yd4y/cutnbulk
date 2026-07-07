@@ -1,6 +1,6 @@
 # cutnbulk 本地健身饮食日历
 
-这是一个个人使用的极简健身饮食记录 App，使用 FastAPI + Jinja2 + SQLite 构建，可在本地浏览器运行。
+这是一个个人使用的极简健身饮食记录 App，使用 FastAPI + Jinja2 + SQLAlchemy 构建。它可以在本地用 SQLite 运行，也可以部署到公网并连接 PostgreSQL，让手机 Safari 随时访问。
 
 ## 功能
 
@@ -17,7 +17,8 @@
 - Python
 - FastAPI
 - Jinja2 Templates
-- SQLite
+- SQLite（本地开发）
+- PostgreSQL（线上部署）
 - SQLAlchemy
 - 普通 HTML/CSS/少量 JavaScript
 
@@ -37,6 +38,12 @@ uvicorn main:app --reload
 
 ```text
 http://127.0.0.1:8000
+```
+
+健康检查：
+
+```text
+http://127.0.0.1:8000/health
 ```
 
 核心页面：
@@ -61,9 +68,154 @@ http://127.0.0.1:8000
 
 ## 数据库和上传文件
 
-- 首次启动会自动创建 SQLite 数据库：`health_tracker.db`
+- 本地没有配置 `DATABASE_URL` 时，会自动创建 SQLite 数据库：`health_tracker.db`
+- 线上配置 `DATABASE_URL` 后，会使用 PostgreSQL
 - 食物照片会保存到：`app/uploads/`
 - 上传文件和本地数据库不会提交到 Git
+
+## 环境变量
+
+复制 `.env.example` 为 `.env`，按需要填写：
+
+```bash
+cp .env.example .env
+```
+
+```text
+DATABASE_URL=
+SECRET_KEY=
+OPENAI_API_KEY=
+OPENAI_FOOD_MODEL=gpt-5.4-mini
+```
+
+- `DATABASE_URL`：线上 PostgreSQL 连接字符串；本地留空时使用 SQLite。
+- `SECRET_KEY`：后续登录/会话功能使用；当前先预留。
+- `OPENAI_API_KEY`：后续拍照估算热量时使用。
+- `OPENAI_FOOD_MODEL`：拍照估算模型名，默认 `gpt-5.4-mini`。
+
+## 部署到公网，让手机 Safari 随时访问
+
+本地运行只适合在你的 Mac 或同一个 Wi-Fi 下测试。如果想在外面随时打开，需要把项目部署到公网服务器，并使用云数据库。
+
+推荐第一版：
+
+- 部署平台：Render 或 Railway
+- 数据库：Supabase Postgres、Render Postgres 或 Railway Postgres
+- 访问方式：部署完成后用公网 HTTPS 地址，例如 `https://cutnbulk.onrender.com`
+
+### 1. 上传代码到 GitHub
+
+确认不要提交这些本地文件：
+
+```text
+.env
+.venv/
+health_tracker.db
+app/uploads/里的用户上传图片
+```
+
+仓库根目录的 `.gitignore` 已经忽略了这些内容。
+
+### 2. 准备 PostgreSQL 数据库
+
+创建一个 PostgreSQL 数据库，例如 Supabase Postgres。
+
+拿到连接字符串后，保存为部署平台的环境变量：
+
+```text
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+```
+
+如果平台给的是 `postgres://...`，代码会自动转换为 SQLAlchemy 可用的 `postgresql://...`。
+
+### 3. 在 Render 部署
+
+方式 A：使用仓库根目录的 `render.yaml`
+
+1. 打开 Render。
+2. 创建 Blueprint / New Blueprint。
+3. 连接 GitHub 仓库。
+4. Render 会读取根目录的 `render.yaml`。
+5. 在环境变量里填入 `DATABASE_URL`、`OPENAI_API_KEY` 等。
+
+方式 B：手动创建 Web Service
+
+Render 设置：
+
+```text
+Root Directory: health_tracker
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /health
+```
+
+环境变量：
+
+```text
+DATABASE_URL=你的PostgreSQL连接字符串
+SECRET_KEY=任意长随机字符串
+OPENAI_API_KEY=可选
+OPENAI_FOOD_MODEL=gpt-5.4-mini
+```
+
+部署完成后，Render 会给你一个公网地址，例如：
+
+```text
+https://cutnbulk.onrender.com
+```
+
+手机 Safari 直接打开这个地址即可。先测试：
+
+```text
+https://cutnbulk.onrender.com/health
+```
+
+看到下面内容就说明服务在线：
+
+```json
+{"status":"ok","app":"cutnbulk"}
+```
+
+### 4. 在 Railway 部署
+
+Railway 手动设置也类似：
+
+```text
+Root Directory: health_tracker
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+然后在 Variables 中添加：
+
+```text
+DATABASE_URL=你的PostgreSQL连接字符串
+SECRET_KEY=任意长随机字符串
+OPENAI_API_KEY=可选
+OPENAI_FOOD_MODEL=gpt-5.4-mini
+```
+
+Railway 部署完成后会提供公网域名，手机 Safari 打开该域名即可。
+
+### 本地 SQLite 和线上 PostgreSQL 的区别
+
+- SQLite：一个本地 `.db` 文件，适合个人电脑开发测试。
+- PostgreSQL：云数据库，适合公网部署和长期保存数据。
+- 线上不要依赖 `health_tracker.db`，因为服务器重启、重新部署或换实例时，本地文件可能丢失。
+
+### 上传图片提醒
+
+当前图片仍然保存到 `app/uploads/`。这在本地没问题，但很多云平台的本地磁盘不是长期可靠存储。上线初期可以先测试，正式长期使用建议下一步改成 Supabase Storage 或 S3。
+
+## 数据安全提醒
+
+cutnbulk 会记录体重、饮食、训练等私人数据。部署到公网后请注意：
+
+- 线上版本不建议公开给别人使用。
+- 后续应该加入登录系统。
+- 不要把 `.env`、API key、数据库密码提交到 GitHub。
+- 不要把本地 `health_tracker.db` 提交到 GitHub。
+- 如果网址被别人知道，在没有登录系统前，对方可能看到或修改你的记录。
 
 ## AI 饮食估算说明
 
