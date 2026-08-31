@@ -97,13 +97,7 @@ async def save_day(
     fatigue_level: str = Form(""),
     training_parts: list[str] | None = Form(None),
     training_notes: str = Form(""),
-    food_description: str = Form(""),
-    calories: str = Form(""),
-    protein_g: str = Form(""),
-    carbs_g: str = Form(""),
-    fat_g: str = Form(""),
     daily_note: str = Form(""),
-    image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
     target_date = _parse_date(entry_date)
@@ -115,27 +109,12 @@ async def save_day(
         entry = DailyEntry(entry_date=target_date)
         db.add(entry)
 
-    image_path = await _save_upload(image)
-    if image_path:
-        entry.image_path = image_path
-
-    description = food_description.strip()
-    should_estimate = description and any(
-        not value.strip() for value in [calories, protein_g, carbs_g, fat_g]
-    )
-    estimate = estimate_meal_nutrition(db, description, entry.image_path) if should_estimate else None
-
     entry.weight_kg = _parse_float(weight_kg)
     entry.waist_cm = _parse_float(waist_cm)
     entry.sleep_hours = _parse_float(sleep_hours)
     entry.fatigue_level = _parse_int(fatigue_level)
     entry.training_parts = ",".join(training_parts or [])
     entry.training_notes = training_notes.strip() or None
-    entry.food_description = description or None
-    entry.calories = _parse_float(calories, estimate.calories if estimate else None)
-    entry.protein_g = _parse_float(protein_g, estimate.protein_g if estimate else None)
-    entry.carbs_g = _parse_float(carbs_g, estimate.carbs_g if estimate else None)
-    entry.fat_g = _parse_float(fat_g, estimate.fat_g if estimate else None)
     entry.daily_note = daily_note.strip() or None
     db.commit()
 

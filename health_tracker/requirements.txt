@@ -6,3 +6,4 @@ python-multipart
 openai
 python-dotenv
 pillow
+psycopg2-binary

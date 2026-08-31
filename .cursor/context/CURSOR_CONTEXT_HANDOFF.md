@@ -1115,12 +1115,12 @@ cp .env.example .env
 
 ### Pending / not done
 
-- [ ] **Merge deployment commit from `main`** (`9b19771`) into feature branch OR reconcile branches — includes `render.yaml`, `/health`, `DATABASE_URL` support
+- [x] **Merge deployment commit from `main`** (`9b19771`) into feature branch — includes `render.yaml`, `/health`, `DATABASE_URL` support
 - [ ] **End-to-end Vision API test with real `OPENAI_API_KEY`** — only fallback path verified in cloud agent environment without key
 - [ ] **Integrate TypeScript `src/nutrition` into Python meal estimation** — if user wants unified dish breakdown in app (not requested yet)
-- [ ] **Add `/foods` to bottom navigation** — page exists but not linked in nav
+- [x] **Add `/foods` to bottom navigation** — page exists but not linked in nav
 - [ ] **Remove or redirect legacy routes** (`/meals`, `/workouts`, `/body`, `/weekly`) — if user wants full cleanup
-- [ ] **Clean up `DailyEntry` legacy food fields** in `save_day` — still writes old food fields alongside `MealEntry` flow
+- [x] **Clean up `DailyEntry` legacy food fields** in `save_day` — still writes old food fields alongside `MealEntry` flow
 - [ ] **CSV food import UI** — placeholder only
 - [ ] **Public deployment** — discussed but user chose local-first; `render.yaml` on main not on feature branch
 - [ ] **Weight trend charts / data export** — not requested but natural extensions

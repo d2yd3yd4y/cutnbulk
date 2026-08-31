@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cutnbulk
+    runtime: python
+    rootDir: health_tracker
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_FOOD_MODEL
+        value: gpt-5.4-mini

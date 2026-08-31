@@ -16,6 +16,11 @@ app = FastAPI(title="cutnbulk")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "app": "cutnbulk"}
+
 app.include_router(calendar.router)
 app.include_router(day.router)
 app.include_router(foods.router)
