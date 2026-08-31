@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -11,6 +12,7 @@ from app.database import get_db
 from app.models import DailyEntry, MealEntry, MealFoodMatch
 from app.services.goal_service import get_goal_progress_for_day
 from app.services.nutrition_estimator import NutritionEstimateResult, estimate_meal_nutrition
+from app.services.vision_food_estimator import estimate_food_from_image
 
 
 router = APIRouter(prefix="/day", tags=["day"])
@@ -58,6 +60,9 @@ def day_page(
     matches_by_meal: dict[int, list[MealFoodMatch]] = {}
     for match in meal_matches:
         matches_by_meal.setdefault(match.meal_entry_id, []).append(match)
+    uncertainty_by_meal = {
+        meal.id: _parse_uncertainty_factors(meal.uncertainty_factors) for meal in meals
+    }
     selected_parts = _split_training_parts(entry.training_parts if entry else None)
     return templates.TemplateResponse(
         name="day.html",
@@ -73,6 +78,7 @@ def day_page(
             "meals": meals,
             "meal_totals": _meal_totals(meals),
             "matches_by_meal": matches_by_meal,
+            "uncertainty_by_meal": uncertainty_by_meal,
             "goal_progress": get_goal_progress_for_day(db, target_date),
             "meal_types": MEAL_TYPES,
             "meal_type_labels": MEAL_TYPE_LABELS,
@@ -91,13 +97,7 @@ async def save_day(
     fatigue_level: str = Form(""),
     training_parts: list[str] | None = Form(None),
     training_notes: str = Form(""),
-    food_description: str = Form(""),
-    calories: str = Form(""),
-    protein_g: str = Form(""),
-    carbs_g: str = Form(""),
-    fat_g: str = Form(""),
     daily_note: str = Form(""),
-    image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
     target_date = _parse_date(entry_date)
@@ -109,27 +109,12 @@ async def save_day(
         entry = DailyEntry(entry_date=target_date)
         db.add(entry)
 
-    image_path = await _save_upload(image)
-    if image_path:
-        entry.image_path = image_path
-
-    description = food_description.strip()
-    should_estimate = description and any(
-        not value.strip() for value in [calories, protein_g, carbs_g, fat_g]
-    )
-    estimate = estimate_meal_nutrition(db, description, entry.image_path) if should_estimate else None
-
     entry.weight_kg = _parse_float(weight_kg)
     entry.waist_cm = _parse_float(waist_cm)
     entry.sleep_hours = _parse_float(sleep_hours)
     entry.fatigue_level = _parse_int(fatigue_level)
     entry.training_parts = ",".join(training_parts or [])
     entry.training_notes = training_notes.strip() or None
-    entry.food_description = description or None
-    entry.calories = _parse_float(calories, estimate.calories if estimate else None)
-    entry.protein_g = _parse_float(protein_g, estimate.protein_g if estimate else None)
-    entry.carbs_g = _parse_float(carbs_g, estimate.carbs_g if estimate else None)
-    entry.fat_g = _parse_float(fat_g, estimate.fat_g if estimate else None)
     entry.daily_note = daily_note.strip() or None
     db.commit()
 
@@ -168,6 +153,7 @@ async def create_meal(
         fat_g=fat_g,
         notes=notes,
         image_path=image_path,
+        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
     )
     db.add(meal)
     db.flush()
@@ -216,6 +202,7 @@ async def update_meal(
         fat_g=fat_g,
         notes=notes,
         image_path=image_path,
+        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
     )
     _sync_meal_matches(db, meal, estimate)
     db.commit()
@@ -277,9 +264,13 @@ def _apply_meal_form(
     fat_g: str,
     notes: str,
     image_path: str | None,
+    prefer_vision: bool = False,
 ):
     clean_description = description.strip()
-    estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
+    if prefer_vision:
+        estimate = estimate_food_from_image(db, image_path or meal.image_path, clean_description)
+    else:
+        estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
 
     meal.meal_type = meal_type if meal_type in MEAL_TYPE_LABELS else "custom"
     meal.meal_name = meal_name.strip() or None
@@ -292,6 +283,10 @@ def _apply_meal_form(
     meal.fat_g = _parse_float(fat_g, estimate.fat_g) or 0
     meal.estimate_confidence = estimate.confidence
     meal.estimate_reasoning = estimate.reasoning
+    meal.estimate_source = estimate.source
+    meal.calorie_range_low = estimate.calorie_range_low
+    meal.calorie_range_high = estimate.calorie_range_high
+    meal.uncertainty_factors = json.dumps(estimate.uncertainty_factors or [], ensure_ascii=False)
     meal.notes = notes.strip() or None
     return estimate
 
@@ -332,6 +327,20 @@ def _parse_float(value: str, default: float | None = None) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _has_manual_nutrition(*values: str) -> bool:
+    return any(value.strip() for value in values)
+
+
+def _parse_uncertainty_factors(value: str | None) -> list[str]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
 
 
 def _parse_int(value: str) -> int | None:

@@ -128,7 +128,7 @@ select {
   left: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   width: min(100%, var(--app-width));
   min-height: 68px;
   margin: 0 auto;
@@ -706,6 +706,14 @@ input[type="range"] {
   font-weight: 850;
 }
 
+.estimate-hint {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .food-thumb {
   display: block;
   overflow: hidden;
@@ -824,6 +832,27 @@ input[type="range"] {
   font-weight: 900;
 }
 
+.ai-label,
+.fallback-label {
+  display: inline-flex;
+  width: max-content;
+  margin-left: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-label {
+  background: #eaf3ee;
+  color: var(--primary-dark);
+}
+
+.fallback-label {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
 .meal-thumb {
   display: block;
   overflow: hidden;
@@ -889,6 +918,29 @@ input[type="range"] {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.5;
+}
+
+.estimate-range {
+  margin: 0 10px 10px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.uncertainty-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+
+.uncertainty-list span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff7ec;
+  color: #9a4a1f;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .matched-foods {
