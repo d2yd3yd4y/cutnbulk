@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.models import BodyMetric, MealEntry, WorkoutEntry
+from app.utils.meal_totals import meal_totals
 
 
 def build_daily_advice(db: Session, target_date: date) -> str:
@@ -15,9 +16,10 @@ def build_daily_advice(db: Session, target_date: date) -> str:
         .first()
     )
 
-    calories = sum(meal.calories for meal in meals)
-    protein = sum(meal.protein_g for meal in meals)
-    carbs = sum(meal.carbs_g for meal in meals)
+    totals = meal_totals(meals)
+    calories = totals["calories"]
+    protein = totals["protein_g"]
+    carbs = totals["carbs_g"]
     total_sets = sum(workout.sets for workout in workouts)
     total_volume = sum(workout.volume for workout in workouts)
 
@@ -39,11 +41,9 @@ def build_daily_advice(db: Session, target_date: date) -> str:
 def summarize_today(db: Session, target_date: date) -> dict[str, float | int]:
     meals = db.query(MealEntry).filter(MealEntry.entry_date == target_date).all()
     workouts = db.query(WorkoutEntry).filter(WorkoutEntry.entry_date == target_date).all()
+    totals = meal_totals(meals)
     return {
-        "calories": round(sum(meal.calories for meal in meals), 1),
-        "protein_g": round(sum(meal.protein_g for meal in meals), 1),
-        "carbs_g": round(sum(meal.carbs_g for meal in meals), 1),
-        "fat_g": round(sum(meal.fat_g for meal in meals), 1),
+        **totals,
         "workout_sets": sum(workout.sets for workout in workouts),
         "workout_volume": round(sum(workout.volume for workout in workouts), 1),
     }

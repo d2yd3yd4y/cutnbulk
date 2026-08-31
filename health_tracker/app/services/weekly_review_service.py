@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 
 from app.models import BodyMetric, MealEntry, WorkoutEntry
+from app.utils.stats import avg_total
 
 
 def build_weekly_review(db: Session, end_date: date | None = None) -> dict:
@@ -53,27 +54,21 @@ def build_weekly_review(db: Session, end_date: date | None = None) -> dict:
         "start_date": start,
         "end_date": end,
         "recorded_days": recorded_days,
-        "average_calories": _avg(total_calories, day_count),
-        "average_protein": _avg(total_protein, day_count),
-        "average_carbs": _avg(total_carbs, day_count),
-        "average_fat": _avg(total_fat, day_count),
+        "average_calories": avg_total(total_calories, day_count),
+        "average_protein": avg_total(total_protein, day_count),
+        "average_carbs": avg_total(total_carbs, day_count),
+        "average_fat": avg_total(total_fat, day_count),
         "total_sets": total_sets,
         "total_volume": round(total_volume, 1),
         "weight_trend": _trend(weight_values, "kg"),
         "waist_trend": _trend(waist_values, "cm"),
-        "average_sleep": _avg(sum(sleep_values), len(sleep_values)) if sleep_values else None,
-        "average_fatigue": _avg(sum(fatigue_values), len(fatigue_values)) if fatigue_values else None,
+        "average_sleep": avg_total(sum(sleep_values), len(sleep_values)) if sleep_values else None,
+        "average_fatigue": avg_total(sum(fatigue_values), len(fatigue_values)) if fatigue_values else None,
         "summary": "",
         "body_metrics": body_metrics,
     }
     review["summary"] = _build_summary(review, weight_values, waist_values)
     return review
-
-
-def _avg(total: float, count: int) -> float:
-    if count <= 0:
-        return 0
-    return round(total / count, 1)
 
 
 def _trend(values: list[float], unit: str) -> str:

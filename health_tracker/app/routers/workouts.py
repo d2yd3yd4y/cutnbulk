@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import WorkoutEntry
+from app.utils.form_parsing import parse_float, parse_int
 
 
 router = APIRouter(prefix="/workouts", tags=["workouts"])
@@ -63,10 +64,10 @@ def create_workouts(
         entry = WorkoutEntry(
             entry_date=entry_date,
             exercise=clean_name,
-            sets=_parse_int(_get(sets, index), default=0),
-            reps=_parse_int(_get(reps, index), default=0),
-            weight_kg=_parse_float(_get(weight_kg, index), default=0),
-            rpe=_parse_int(_get(rpe, index), default=None),
+            sets=parse_int(_get(sets, index), default=0),
+            reps=parse_int(_get(reps, index), default=0),
+            weight_kg=parse_float(_get(weight_kg, index), default=0),
+            rpe=parse_int(_get(rpe, index), default=None),
             to_failure=index in failure_indexes,
             notes=_get(notes, index).strip() or None,
         )
@@ -77,17 +78,3 @@ def create_workouts(
 
 def _get(values: list[str], index: int) -> str:
     return values[index] if index < len(values) else ""
-
-
-def _parse_int(value: str, default: int | None) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _parse_float(value: str, default: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default

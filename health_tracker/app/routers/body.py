@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import BodyMetric
+from app.utils.form_parsing import parse_float, parse_int
 
 
 router = APIRouter(prefix="/body", tags=["body"])
@@ -52,24 +53,10 @@ def upsert_body_metric(
         metric = BodyMetric(entry_date=entry_date)
         db.add(metric)
 
-    metric.weight_kg = _parse_float(weight_kg)
-    metric.waist_cm = _parse_float(waist_cm)
-    metric.sleep_hours = _parse_float(sleep_hours)
-    metric.fatigue_level = _parse_int(fatigue_level)
+    metric.weight_kg = parse_float(weight_kg)
+    metric.waist_cm = parse_float(waist_cm)
+    metric.sleep_hours = parse_float(sleep_hours)
+    metric.fatigue_level = parse_int(fatigue_level)
     metric.notes = notes
     db.commit()
     return RedirectResponse(url="/body", status_code=303)
-
-
-def _parse_float(value: str) -> float | None:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _parse_int(value: str) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None

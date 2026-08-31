@@ -9,7 +9,7 @@
 - 每日记录：体重、睡眠、疲劳感
 - 训练记录：用训练部位 + 训练备注快速记录
 - 饮食记录：每天可添加多顿饭，每顿单独记录描述、照片、热量和三大营养素
-- 食物数据库：内置常见主食、蛋白质食材、中餐菜品、外卖、饮品和零食
+- 食物数据库：支持搜索、查看和手动新增自定义食物
 - 本地饮食估算：优先使用食物数据库匹配和份量解析，匹配不到时 fallback 到旧 mock 规则
 
 ## 技术栈
@@ -230,9 +230,7 @@ cutnbulk 会记录体重、饮食、训练等私人数据。部署到公网后�
 5. 如果没有 API key、API 调用失败，或没有上传图片，则使用本地 Food Database
 6. 如果完全匹配不到，再 fallback 到 `app/services/food_ai_service.py` 中的旧本地 mock 规则
 
-食物库会在项目启动时自动初始化，使用 `normalized_name` 避免重复插入。
-
-可以在 `/foods/new` 新增自定义食物，新增后会参与后续饮食估算。
+食物库不会自动预置数据。可以在 `/foods/new` 手动新增自定义食物，新增后会参与后续饮食估算。
 
 注意：这些估算不是医学级精确数据。中餐、外卖、火锅、烧烤等会因为油量、酱料、实际份量不同产生明显误差，建议把它作为辅助记录，并允许手动修正。
 
@@ -274,16 +272,22 @@ health_tracker/
   .env.example
   app/
     __init__.py
+    constants.py
     database.py
     models.py
     schemas.py
+    utils/
+      form_parsing.py
+      food_names.py
+      meal_totals.py
+      stats.py
     services/
       food_ai_service.py
       food_import_service.py
-      food_seed_service.py
       goal_service.py
       insight_service.py
       nutrition_estimator.py
+      upload_service.py
       vision_food_estimator.py
       weekly_review_service.py
     routers/

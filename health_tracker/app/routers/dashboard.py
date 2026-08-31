@@ -11,15 +11,7 @@ from app.services.insight_service import build_daily_advice, summarize_today
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
-MEAL_TYPE_LABELS = {
-    "breakfast": "早餐",
-    "lunch": "午餐",
-    "dinner": "晚餐",
-    "snack": "加餐",
-}
-
-
-@router.get("/")
+from app.constants import MEAL_TYPE_LABELS
 def dashboard(request: Request, db: Session = Depends(get_db)):
     today = date.today()
     summary = summarize_today(db, today)

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import FoodItem
-from app.services.food_seed_service import normalize_food_name
+from app.utils.food_names import normalize_food_name
 
 
 router = APIRouter(prefix="/foods", tags=["foods"])
