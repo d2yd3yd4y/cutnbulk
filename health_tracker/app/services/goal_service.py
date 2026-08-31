@@ -4,6 +4,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.models import GoalSetting, MealEntry
+from app.utils.meal_totals import meal_totals
 
 
 KCAL_PER_KG = 7700
@@ -156,7 +157,7 @@ def get_active_goal(db: Session) -> GoalSetting | None:
 def get_goal_progress_for_day(db: Session, target_date: date) -> dict:
     goal = get_active_goal(db)
     meals = db.query(MealEntry).filter(MealEntry.entry_date == target_date).all()
-    consumed = round(sum(meal.calories or 0 for meal in meals), 1)
+    consumed = meal_totals(meals)["calories"]
     recommended = goal.recommended_calories if goal else None
     remaining = round(recommended - consumed, 1) if recommended is not None else None
     return {

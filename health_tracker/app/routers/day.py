@@ -1,36 +1,26 @@
 import json
 from datetime import date, datetime
-from pathlib import Path
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.constants import MEAL_TYPE_LABELS, MEAL_TYPES
 from app.database import get_db
 from app.models import DailyEntry, MealEntry, MealFoodMatch
 from app.services.goal_service import get_goal_progress_for_day
 from app.services.nutrition_estimator import NutritionEstimateResult, estimate_meal_nutrition
+from app.services.upload_service import save_upload
 from app.services.vision_food_estimator import estimate_food_from_image
+from app.utils.form_parsing import parse_float, parse_int
+from app.utils.meal_totals import meal_totals
 
 
 router = APIRouter(prefix="/day", tags=["day"])
 templates = Jinja2Templates(directory="app/templates")
-UPLOAD_DIR = Path("app/uploads")
 TRAINING_PARTS = ["胸", "背", "腿", "肩", "手臂", "核心", "有氧", "休息"]
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-MEAL_TYPE_LABELS = {
-    "breakfast": "早餐",
-    "lunch": "午餐",
-    "dinner": "晚餐",
-    "snack": "加餐",
-    "pre_workout": "训练前",
-    "post_workout": "训练后",
-    "night": "夜宵",
-    "custom": "自定义",
-}
-MEAL_TYPES = list(MEAL_TYPE_LABELS.items())
 
 
 @router.get("/{entry_date}")
@@ -76,7 +66,7 @@ def day_page(
             "training_parts": TRAINING_PARTS,
             "selected_parts": selected_parts,
             "meals": meals,
-            "meal_totals": _meal_totals(meals),
+            "meal_totals": meal_totals(meals),
             "matches_by_meal": matches_by_meal,
             "uncertainty_by_meal": uncertainty_by_meal,
             "goal_progress": get_goal_progress_for_day(db, target_date),
@@ -109,10 +99,10 @@ async def save_day(
         entry = DailyEntry(entry_date=target_date)
         db.add(entry)
 
-    entry.weight_kg = _parse_float(weight_kg)
-    entry.waist_cm = _parse_float(waist_cm)
-    entry.sleep_hours = _parse_float(sleep_hours)
-    entry.fatigue_level = _parse_int(fatigue_level)
+    entry.weight_kg = parse_float(weight_kg)
+    entry.waist_cm = parse_float(waist_cm)
+    entry.sleep_hours = parse_float(sleep_hours)
+    entry.fatigue_level = parse_int(fatigue_level)
     entry.training_parts = ",".join(training_parts or [])
     entry.training_notes = training_notes.strip() or None
     entry.daily_note = daily_note.strip() or None
@@ -139,7 +129,7 @@ async def create_meal(
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
-    image_path = await _save_upload(image)
+    image_path = await save_upload(image)
     meal = MealEntry(entry_date=target_date)
     estimate = _apply_meal_form(
         db=db,
@@ -189,7 +179,7 @@ async def update_meal(
     if meal is None:
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
-    image_path = await _save_upload(image)
+    image_path = await save_upload(image)
     estimate = _apply_meal_form(
         db=db,
         meal=meal,
@@ -243,15 +233,6 @@ def _split_training_parts(value: str | None) -> list[str]:
     return [part for part in value.split(",") if part]
 
 
-def _meal_totals(meals: list[MealEntry]) -> dict[str, float]:
-    return {
-        "calories": round(sum(meal.calories or 0 for meal in meals), 1),
-        "protein_g": round(sum(meal.protein_g or 0 for meal in meals), 1),
-        "carbs_g": round(sum(meal.carbs_g or 0 for meal in meals), 1),
-        "fat_g": round(sum(meal.fat_g or 0 for meal in meals), 1),
-    }
-
-
 def _apply_meal_form(
     db: Session,
     meal: MealEntry,
@@ -277,10 +258,10 @@ def _apply_meal_form(
     meal.description = clean_description
     if image_path:
         meal.image_path = image_path
-    meal.calories = _parse_float(calories, estimate.calories) or 0
-    meal.protein_g = _parse_float(protein_g, estimate.protein_g) or 0
-    meal.carbs_g = _parse_float(carbs_g, estimate.carbs_g) or 0
-    meal.fat_g = _parse_float(fat_g, estimate.fat_g) or 0
+    meal.calories = parse_float(calories, estimate.calories) or 0
+    meal.protein_g = parse_float(protein_g, estimate.protein_g) or 0
+    meal.carbs_g = parse_float(carbs_g, estimate.carbs_g) or 0
+    meal.fat_g = parse_float(fat_g, estimate.fat_g) or 0
     meal.estimate_confidence = estimate.confidence
     meal.estimate_reasoning = estimate.reasoning
     meal.estimate_source = estimate.source
@@ -309,26 +290,6 @@ def _sync_meal_matches(db: Session, meal: MealEntry, estimate: NutritionEstimate
         )
 
 
-async def _save_upload(image: UploadFile | None) -> str | None:
-    if not image or not image.filename:
-        return None
-
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    suffix = Path(image.filename).suffix.lower() or ".jpg"
-    filename = f"{uuid4().hex}{suffix}"
-    destination = UPLOAD_DIR / filename
-    content = await image.read()
-    destination.write_bytes(content)
-    return f"/uploads/{filename}"
-
-
-def _parse_float(value: str, default: float | None = None) -> float | None:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _has_manual_nutrition(*values: str) -> bool:
     return any(value.strip() for value in values)
 
@@ -341,10 +302,3 @@ def _parse_uncertainty_factors(value: str | None) -> list[str]:
     except json.JSONDecodeError:
         return []
     return parsed if isinstance(parsed, list) else []
-
-
-def _parse_int(value: str) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
