@@ -85,13 +85,13 @@ cp .env.example .env
 DATABASE_URL=
 SECRET_KEY=
 OPENAI_API_KEY=
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 - `DATABASE_URL`：线上 PostgreSQL 连接字符串；本地留空时使用 SQLite。
 - `SECRET_KEY`：后续登录/会话功能使用；当前先预留。
-- `OPENAI_API_KEY`：后续拍照估算热量时使用。
-- `OPENAI_FOOD_MODEL`：拍照估算模型名，默认 `gpt-5.4-mini`。
+- `OPENAI_API_KEY`：拍照估算热量时使用（不填则只用本地估算）。
+- `OPENAI_FOOD_MODEL`：拍照估算模型名，默认 `gpt-4.1-mini`。
 
 ## 部署到公网，让手机 Safari 随时访问
 
@@ -155,7 +155,7 @@ Health Check Path: /health
 DATABASE_URL=你的PostgreSQL连接字符串
 SECRET_KEY=任意长随机字符串
 OPENAI_API_KEY=可选
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 部署完成后，Render 会给你一个公网地址，例如：
@@ -192,7 +192,7 @@ Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
 DATABASE_URL=你的PostgreSQL连接字符串
 SECRET_KEY=任意长随机字符串
 OPENAI_API_KEY=可选
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 Railway 部署完成后会提供公网域名，手机 Safari 打开该域名即可。
@@ -248,10 +248,10 @@ cp .env.example .env
 
 ```text
 OPENAI_API_KEY=你的 key
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
-如果要切换模型，可以把 `OPENAI_FOOD_MODEL` 改成其他支持视觉输入的模型，例如未来的 `gpt-5.5`。
+如果要切换模型，可以把 `OPENAI_FOOD_MODEL` 改成其他支持视觉输入的模型，例如 `gpt-4.1`（更贵更强）或 `gpt-4o-mini`（一般不推荐看图，图像计费可能更贵）。
 
 拍照估算测试：
 
