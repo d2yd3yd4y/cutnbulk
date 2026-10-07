@@ -215,7 +215,7 @@ def _with_fallback_reason(
         confidence_label=result.confidence_label,
         reasoning=f"{reason} {result.reasoning}",
         matched_foods=result.matched_foods,
-        source="fallback",
+        source="vision_fallback",
         calorie_range_low=result.calorie_range_low,
         calorie_range_high=result.calorie_range_high,
         uncertainty_factors=result.uncertainty_factors,

@@ -64,9 +64,6 @@
                 {% if entry and entry.weight_kg is not none %}
                   <span class="weight-tag">{{ entry.weight_kg }}kg</span>
                 {% endif %}
-                {% if entry and entry.training_parts %}
-                  <span>{{ entry.training_parts.replace(",", "/") }}</span>
-                {% endif %}
                 {% if meal_total %}
                   <span>{{ meal_total.calories|round|int }} kcal</span>
                 {% endif %}

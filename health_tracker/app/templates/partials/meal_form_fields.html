@@ -1,3 +1,33 @@
+{% if entry_mode is defined and entry_mode %}
+  {% set default_mode = entry_mode %}
+{% elif meal and meal.image_path %}
+  {% set default_mode = 'photo' %}
+{% else %}
+  {% set default_mode = 'manual' %}
+{% endif %}
+<div class="entry-mode-toggle segmented mode-segmented" role="radiogroup" aria-label="录入方式">
+  <label class="choice-option">
+    <input
+      class="choice-input entry-mode-input"
+      type="radio"
+      name="entry_mode"
+      value="manual"
+      {% if default_mode != 'photo' %}checked{% endif %}
+    >
+    <span class="choice-label">手动输入</span>
+  </label>
+  <label class="choice-option">
+    <input
+      class="choice-input entry-mode-input"
+      type="radio"
+      name="entry_mode"
+      value="photo"
+      {% if default_mode == 'photo' %}checked{% endif %}
+    >
+    <span class="choice-label">拍照估算</span>
+  </label>
+</div>
+
 <label>
   餐次
   <select name="meal_type" class="meal-type-select" required>
@@ -6,44 +36,68 @@
     {% endfor %}
   </select>
 </label>
-<label class="custom-meal-name">
+
+<label class="custom-meal-name" {% if not meal or meal.meal_type != 'custom' %}hidden{% endif %}>
   自定义餐名
-  <input type="text" name="meal_name" value="{{ meal.meal_name if meal and meal.meal_name else '' }}" placeholder="例如：下午加餐、火锅">
+  <input
+    type="text"
+    name="meal_name"
+    value="{{ meal.meal_name if meal and meal.meal_name else '' }}"
+    placeholder="例如：下午加餐、火锅"
+  >
 </label>
-<label class="full-width">
-  食物描述
-  <textarea name="description" rows="3" required placeholder="例如：鸡胸肉、米饭、西兰花">{{ meal.description if meal else '' }}</textarea>
+
+<label class="full-width meal-description-field">
+  <span class="desc-label-manual">食物描述</span>
+  <span class="desc-label-photo" hidden>补充描述（可选）</span>
+  <textarea
+    name="description"
+    class="meal-description-input"
+    rows="3"
+    placeholder="例如：鸡胸肉、米饭、西兰花"
+    data-placeholder-manual="例如：鸡胸肉、米饭、西兰花"
+    data-placeholder-photo="例如：米饭半份、不要皮、酱汁很多"
+  >{{ meal.description if meal else '' }}</textarea>
 </label>
-<div class="form-grid compact full-width">
+
+<div class="form-grid compact full-width mode-panel" data-mode-panel="manual" {% if default_mode == 'photo' %}hidden{% endif %}>
   <label>
     热量 kcal
-    <input type="number" inputmode="decimal" step="0.1" name="calories" value="{{ meal.calories if meal else '' }}" placeholder="自动估算">
+    <input type="number" inputmode="decimal" step="0.1" name="calories" value="{{ meal.calories if meal and default_mode != 'photo' else '' }}" placeholder="可留空自动估算">
   </label>
   <label>
     蛋白质 g
-    <input type="number" inputmode="decimal" step="0.1" name="protein_g" value="{{ meal.protein_g if meal else '' }}" placeholder="自动估算">
+    <input type="number" inputmode="decimal" step="0.1" name="protein_g" value="{{ meal.protein_g if meal and default_mode != 'photo' else '' }}" placeholder="可留空自动估算">
   </label>
   <label>
     碳水 g
-    <input type="number" inputmode="decimal" step="0.1" name="carbs_g" value="{{ meal.carbs_g if meal else '' }}" placeholder="自动估算">
+    <input type="number" inputmode="decimal" step="0.1" name="carbs_g" value="{{ meal.carbs_g if meal and default_mode != 'photo' else '' }}" placeholder="可留空自动估算">
   </label>
   <label>
     脂肪 g
-    <input type="number" inputmode="decimal" step="0.1" name="fat_g" value="{{ meal.fat_g if meal else '' }}" placeholder="自动估算">
+    <input type="number" inputmode="decimal" step="0.1" name="fat_g" value="{{ meal.fat_g if meal and default_mode != 'photo' else '' }}" placeholder="可留空自动估算">
   </label>
 </div>
-<div class="image-row full-width">
+
+<div class="image-row full-width mode-panel" data-mode-panel="photo" {% if default_mode != 'photo' %}hidden{% endif %}>
   <label class="photo-picker">
-    <input type="file" name="image" accept="image/*">
+    <input type="file" name="image" class="meal-image-input" accept="image/*" capture="environment">
     <span>添加照片</span>
   </label>
-  {% if meal and meal.image_path %}
-    <a class="food-thumb" href="{{ meal.image_path }}" target="_blank">
-      <img src="{{ meal.image_path }}" alt="食物照片">
-    </a>
-  {% endif %}
+  <div class="photo-preview-wrap">
+    {% if meal and meal.image_path %}
+      <a class="food-thumb photo-preview-link" href="{{ meal.image_path }}" target="_blank" rel="noopener">
+        <img class="photo-preview-img" src="{{ meal.image_path }}" alt="食物照片" onerror="this.closest('.photo-preview-wrap').hidden=true;">
+      </a>
+    {% else %}
+      <div class="food-thumb photo-preview-link" hidden>
+        <img class="photo-preview-img" alt="照片预览">
+      </div>
+    {% endif %}
+  </div>
+  <p class="estimate-hint full-width">拍照估算会调用 AI；没选照片不会调用。</p>
 </div>
-<p class="estimate-hint full-width">上传照片且不填写营养数字时，会优先使用 AI 拍照估算；结果只是估算，可手动修正。</p>
+
 <label class="full-width">
   备注
   <input type="text" name="notes" value="{{ meal.notes if meal and meal.notes else '' }}" placeholder="可选">

@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindMealTemplates();
   bindWorkoutRows();
   bindTrainingParts();
-  bindMealTypeFields();
+  bindMealForms();
 });
 
 function bindMealTemplates() {
@@ -73,16 +73,114 @@ function bindTrainingParts() {
   });
 }
 
-function bindMealTypeFields() {
+function bindMealForms() {
   document.querySelectorAll(".meal-form").forEach((form) => {
-    const select = form.querySelector(".meal-type-select");
-    const customField = form.querySelector(".custom-meal-name");
-    if (!select || !customField) return;
+    bindMealTypeField(form);
+    bindEntryMode(form);
+    bindPhotoPreview(form);
+  });
+}
 
-    const sync = () => {
-      customField.hidden = select.value !== "custom";
+function bindMealTypeField(form) {
+  const select = form.querySelector(".meal-type-select");
+  const customField = form.querySelector(".custom-meal-name");
+  const customInput = customField ? customField.querySelector('input[name="meal_name"]') : null;
+  if (!select || !customField) return;
+
+  const sync = () => {
+    const isCustom = select.value === "custom";
+    customField.hidden = !isCustom;
+    if (!isCustom && customInput) {
+      customInput.value = "";
+    }
+  };
+  select.addEventListener("change", sync);
+  sync();
+}
+
+function bindEntryMode(form) {
+  const modeInputs = Array.from(form.querySelectorAll(".entry-mode-input"));
+  if (!modeInputs.length) return;
+
+  const sync = () => {
+    const mode = modeInputs.find((input) => input.checked)?.value || "manual";
+    form.dataset.entryMode = mode;
+
+    form.querySelectorAll("[data-mode-panel]").forEach((panel) => {
+      const active = panel.dataset.modePanel === mode;
+      panel.hidden = !active;
+      panel.querySelectorAll("input, textarea, select").forEach((field) => {
+        field.disabled = !active;
+      });
+    });
+
+    const description = form.querySelector(".meal-description-input");
+    const manualLabel = form.querySelector(".desc-label-manual");
+    const photoLabel = form.querySelector(".desc-label-photo");
+    if (description) {
+      const isManual = mode === "manual";
+      description.required = isManual;
+      description.placeholder =
+        description.dataset[isManual ? "placeholderManual" : "placeholderPhoto"] ||
+        description.placeholder;
+      if (manualLabel) manualLabel.hidden = !isManual;
+      if (photoLabel) photoLabel.hidden = isManual;
+    }
+
+    const imageInput = form.querySelector(".meal-image-input");
+    if (imageInput) {
+      imageInput.required = mode === "photo" && !form.querySelector(".photo-preview-img[src]");
+    }
+  };
+
+  modeInputs.forEach((input) => input.addEventListener("change", sync));
+  sync();
+}
+
+function bindPhotoPreview(form) {
+  const imageInput = form.querySelector(".meal-image-input");
+  if (!imageInput) return;
+
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files && imageInput.files[0];
+    const wrap = form.querySelector(".photo-preview-wrap");
+    let preview = form.querySelector(".photo-preview-link");
+    let img = form.querySelector(".photo-preview-img");
+    if (!wrap) return;
+
+    if (!file) {
+      if (preview && !preview.getAttribute("href")) {
+        preview.hidden = true;
+        if (img) img.removeAttribute("src");
+      }
+      return;
+    }
+
+    if (!preview) {
+      preview = document.createElement("div");
+      preview.className = "food-thumb photo-preview-link";
+      img = document.createElement("img");
+      img.className = "photo-preview-img";
+      img.alt = "照片预览";
+      preview.appendChild(img);
+      wrap.prepend(preview);
+    }
+
+    if (!img) {
+      img = document.createElement("img");
+      img.className = "photo-preview-img";
+      img.alt = "照片预览";
+      preview.appendChild(img);
+    }
+
+    const url = URL.createObjectURL(file);
+    img.onload = () => URL.revokeObjectURL(url);
+    img.onerror = () => {
+      preview.hidden = true;
+      URL.revokeObjectURL(url);
     };
-    select.addEventListener("change", sync);
-    sync();
+    img.src = url;
+    preview.hidden = false;
+    imageInput.required = false;
   });
 }
