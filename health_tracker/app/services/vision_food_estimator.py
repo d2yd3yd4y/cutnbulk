@@ -20,7 +20,7 @@ from app.services.nutrition_estimator import (
 
 load_dotenv()
 
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-4.1-mini"
 MAX_IMAGE_SIZE = 1024
 JPEG_QUALITY = 78
 
