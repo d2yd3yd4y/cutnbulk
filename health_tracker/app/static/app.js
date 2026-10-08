@@ -109,7 +109,9 @@ function bindEntryMode(form) {
     form.querySelectorAll("[data-mode-panel]").forEach((panel) => {
       const active = panel.dataset.modePanel === mode;
       panel.hidden = !active;
+      panel.setAttribute("aria-hidden", active ? "false" : "true");
       panel.querySelectorAll("input, textarea, select").forEach((field) => {
+        // Keep disabled fields out of form submit payloads.
         field.disabled = !active;
       });
     });

@@ -421,6 +421,15 @@ h2 {
   margin-bottom: 2px;
 }
 
+/* Author display rules (e.g. .form-grid/.image-row) must not override [hidden]. */
+.mode-panel[hidden],
+.custom-meal-name[hidden],
+.desc-label-manual[hidden],
+.desc-label-photo[hidden],
+.photo-preview-link[hidden] {
+  display: none !important;
+}
+
 .activity-options {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
