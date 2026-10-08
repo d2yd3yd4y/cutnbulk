@@ -39,13 +39,19 @@ class MatchedFood:
 
 @dataclass(frozen=True)
 class NutritionEstimateResult:
+    dish_name: str | None
     calories: float
     protein_g: float
     carbs_g: float
     fat_g: float
     confidence: float
+    confidence_label: str
     reasoning: str
     matched_foods: list[MatchedFood]
+    source: str = "food_database"
+    calorie_range_low: float | None = None
+    calorie_range_high: float | None = None
+    uncertainty_factors: list[str] | None = None
 
 
 def estimate_meal_nutrition(
@@ -75,14 +81,21 @@ def estimate_meal_nutrition(
         "中餐和外卖会受油量、酱料和实际份量影响。"
     )
 
+    low, high = _calorie_range(calories, confidence)
     return NutritionEstimateResult(
+        dish_name=None,
         calories=calories,
         protein_g=protein,
         carbs_g=carbs,
         fat_g=fat,
         confidence=confidence,
+        confidence_label=_confidence_label(confidence),
         reasoning=reasoning,
         matched_foods=matches,
+        source="food_database",
+        calorie_range_low=low,
+        calorie_range_high=high,
+        uncertainty_factors=["份量估算", "油量/酱汁", "实际食材差异"],
     )
 
 
@@ -228,11 +241,30 @@ def _build_match(item: FoodItem, matched_text: str, grams: float, explicit: bool
 def _fallback_estimate(description: str, image_path: str | None) -> NutritionEstimateResult:
     estimate = estimate_food_nutrition(description, image_path)
     return NutritionEstimateResult(
+        dish_name=None,
         calories=estimate.calories,
         protein_g=estimate.protein_g,
         carbs_g=estimate.carbs_g,
         fat_g=estimate.fat_g,
         confidence=0.35,
+        confidence_label="low",
         reasoning=f"食物库未匹配到明确条目，使用旧版本地规则估算：{estimate.reasoning}",
         matched_foods=[],
+        source="fallback",
+        calorie_range_low=round(estimate.calories * 0.65, 1),
+        calorie_range_high=round(estimate.calories * 1.35, 1),
+        uncertainty_factors=["食物库未匹配", "份量未知", "旧规则估算"],
     )
+
+
+def _confidence_label(confidence: float) -> str:
+    if confidence >= 0.7:
+        return "high"
+    if confidence >= 0.45:
+        return "medium"
+    return "low"
+
+
+def _calorie_range(calories: float, confidence: float) -> tuple[float, float]:
+    spread = 0.15 if confidence >= 0.7 else 0.25 if confidence >= 0.45 else 0.35
+    return round(calories * (1 - spread), 1), round(calories * (1 + spread), 1)

@@ -30,6 +30,10 @@ class MealEntry(TimestampMixin, Base):
     fat_g: Mapped[float] = mapped_column(Float, default=0)
     estimate_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     estimate_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estimate_source: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    calorie_range_low: Mapped[float | None] = mapped_column(Float, nullable=True)
+    calorie_range_high: Mapped[float | None] = mapped_column(Float, nullable=True)
+    uncertainty_factors: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 

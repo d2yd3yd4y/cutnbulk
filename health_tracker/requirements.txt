@@ -3,5 +3,7 @@ uvicorn[standard]
 sqlalchemy
 jinja2
 python-multipart
-psycopg2-binary
+openai
 python-dotenv
+pillow
+psycopg2-binary

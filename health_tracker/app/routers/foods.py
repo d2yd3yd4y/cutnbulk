@@ -50,7 +50,7 @@ def foods_page(
             "foods": foods,
             "q": q,
             "total_count": total_count,
-            "active_page": "summary",
+            "active_page": "foods",
         },
     )
 
@@ -65,7 +65,7 @@ def new_food_page(request: Request):
             "today": date.today(),
             "error": None,
             "form_values": {},
-            "active_page": "summary",
+            "active_page": "foods",
         },
     )
 
@@ -144,7 +144,7 @@ def _food_form_response(request: Request, error: str, form_values: dict[str, str
             "today": date.today(),
             "error": error,
             "form_values": form_values,
-            "active_page": "summary",
+            "active_page": "foods",
         },
         status_code=400,
     )

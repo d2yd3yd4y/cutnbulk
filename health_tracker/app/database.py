@@ -66,3 +66,11 @@ def ensure_sqlite_schema():
             connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_confidence FLOAT"))
         if meal_columns and "estimate_reasoning" not in meal_columns:
             connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_reasoning TEXT"))
+        if meal_columns and "estimate_source" not in meal_columns:
+            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_source VARCHAR(40)"))
+        if meal_columns and "calorie_range_low" not in meal_columns:
+            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN calorie_range_low FLOAT"))
+        if meal_columns and "calorie_range_high" not in meal_columns:
+            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN calorie_range_high FLOAT"))
+        if meal_columns and "uncertainty_factors" not in meal_columns:
+            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN uncertainty_factors TEXT"))
