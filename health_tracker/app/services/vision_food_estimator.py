@@ -144,27 +144,29 @@ def _build_prompt(description: str) -> str:
 
 用户描述：{description or "未提供"}
 
-目标：
-- 尽量识别照片里所有可见食物和配料，哪怕只有一点点。
-- 给出接近真实进食份量的估计，不要系统性偏低。
-- 不确定也要给数值；用区间和 uncertainty_factors 表达不确定，而不是省略。
+核心目标：
+- 完整识别所有可见食物/配料（包括少量撒料、酱汁、油脂、炸物）。
+- 按真实成人正餐份量估算，严禁系统性低估。
+- 视觉模型常把主食和蛋白估小；你要主动纠正这种偏差。
+- 不确定也要给数值，用 grams_low/grams_high 和 uncertainty_factors 表达不确定。
 
 识别要求：
-1. ingredients 宁多勿漏：主食、蛋白、蔬菜、配菜、酱汁、油脂、炸物、饮品残留、撒料等都尽量单独列出。
-2. 酱汁/油脂只要看起来存在（光泽、浇汁、拌匀感），就要单独估克数和热量；名称不确定可写“酱汁/调味油”。
-3. 照片中的筷子、叉子、勺子、手、包装文字等可作为尺寸参照；有参照时要用来校准容器和份量。
+1. ingredients 宁多勿漏。
+2. 酱汁/油脂只要看起来存在，就必须单独成行并给克数热量。
+3. 若照片有筷子、叉子、勺子、手、包装文字，用作尺寸参照，并写进 portion_basis。
 
-份量要求：
-4. 先判断容器大小和装载程度（小份/普通/大份），再估每种食材克重。
-5. 每个食材都必须给出 best_estimate_grams、grams_low、grams_high，以及简短 portion_basis。
-6. 看不清时，按该食物在常见成人正餐中的正常份量推断，不要按试吃小份推断。
-7. total_calories 应约等于各食材 calories 之和，基于 best_estimate；不要另给更低的“保险总数”。
-8. calorie_range_low/high 必须给出合理波动区间；total_calories 可为区间内参考中值。
-9. 不确定时宁可略高一点，也不要系统性偏低。
+份量要求（很重要）：
+4. 先判断容器是小/中/大。大碗、装得很满、食物堆得高时，主食和蛋白必须明显上调。
+5. best_estimate_grams 应接近你认为最可能的真实进食量；不要给“保险偏小”的克数。
+6. grams_high 必须覆盖“这顿实际可能偏大”的情况，不能只比 best_estimate 大一点点。
+7. 每个食材的 calories / protein_g / carbs_g / fat_g 必须与 best_estimate_grams 对应。
+8. total_calories ≈ 各食材 calories 之和。
+9. calorie_range_high 必须按更大份量情景估算（接近各食材偏高克重对应热量之和），不能只比 total_calories 高几十卡就封顶。
+10. 不确定时宁可略高，不要偏低。
 
 输出要求：
-10. 用中文写 user_friendly_explanation 和 uncertainty_factors。
-11. 数字全部必填；不要只写“不确定”而不给克数或热量。
+11. 中文写 user_friendly_explanation 和 uncertainty_factors。
+12. 数字全部必填。
 """.strip()
 
 
@@ -202,41 +204,75 @@ def _ingredient_grams(item: dict[str, Any]) -> float:
     return 0.0
 
 
+def _scale_macros(
+    calories: float,
+    protein_g: float,
+    carbs_g: float,
+    fat_g: float,
+    from_grams: float,
+    to_grams: float,
+) -> tuple[float, float, float, float]:
+    if from_grams <= 0 or to_grams <= 0:
+        return calories, protein_g, carbs_g, fat_g
+    scale = to_grams / from_grams
+    return (
+        round(calories * scale, 1),
+        round(protein_g * scale, 1),
+        round(carbs_g * scale, 1),
+        round(fat_g * scale, 1),
+    )
+
+
 def _payload_to_result(payload: dict[str, Any]) -> NutritionEstimateResult:
     ingredients = payload.get("ingredients") or []
     matches: list[MatchedFood] = []
     portion_notes: list[str] = []
-    summed_calories = 0.0
-    summed_protein = 0.0
-    summed_carbs = 0.0
-    summed_fat = 0.0
+    high_calories = 0.0
+    high_protein = 0.0
+    high_carbs = 0.0
+    high_fat = 0.0
+    low_calories = 0.0
 
     for item in ingredients:
-        grams = round(_ingredient_grams(item), 1)
-        calories = round(float(item.get("calories") or 0), 1)
-        protein = round(float(item.get("protein_g") or 0), 1)
-        carbs = round(float(item.get("carbs_g") or 0), 1)
-        fat = round(float(item.get("fat_g") or 0), 1)
-        summed_calories += calories
-        summed_protein += protein
-        summed_carbs += carbs
-        summed_fat += fat
+        best_grams = round(_ingredient_grams(item), 1)
+        grams_low = float(item.get("grams_low") or best_grams)
+        grams_high = float(item.get("grams_high") or best_grams)
+        if grams_high < best_grams:
+            grams_high = best_grams
+        if grams_low <= 0:
+            grams_low = best_grams
+        # Models often give a too-narrow high bound; widen slightly for logging.
+        if best_grams > 0 and grams_high < best_grams * 1.25:
+            grams_high = round(best_grams * 1.35, 1)
 
-        grams_low = item.get("grams_low")
-        grams_high = item.get("grams_high")
-        if grams_low is not None and grams_high is not None:
-            portion_notes.append(
-                f"{item['name']}约{grams:g}g（区间{float(grams_low):g}–{float(grams_high):g}g）"
-            )
-        else:
-            portion_notes.append(f"{item['name']}约{grams:g}g")
+        base_cal = float(item.get("calories") or 0)
+        base_protein = float(item.get("protein_g") or 0)
+        base_carbs = float(item.get("carbs_g") or 0)
+        base_fat = float(item.get("fat_g") or 0)
 
+        # Record using the high-end portion so UI grams match max-calorie logging.
+        calories, protein, carbs, fat = _scale_macros(
+            base_cal, base_protein, base_carbs, base_fat, best_grams, grams_high
+        )
+        low_cal, _, _, _ = _scale_macros(
+            base_cal, base_protein, base_carbs, base_fat, best_grams, grams_low
+        )
+
+        high_calories += calories
+        high_protein += protein
+        high_carbs += carbs
+        high_fat += fat
+        low_calories += low_cal
+
+        portion_notes.append(
+            f"{item['name']}按偏高份量约{grams_high:g}g（模型区间{grams_low:g}–{grams_high:g}g）"
+        )
         matches.append(
             MatchedFood(
                 food_item_id=None,
                 name=item["name"],
                 matched_text=item["name"],
-                estimated_grams=grams,
+                estimated_grams=round(grams_high, 1),
                 calories=calories,
                 protein_g=protein,
                 carbs_g=carbs,
@@ -245,42 +281,25 @@ def _payload_to_result(payload: dict[str, Any]) -> NutritionEstimateResult:
             )
         )
 
-    # Baseline macros from the model, preferring ingredient sums when higher.
-    model_calories = round(float(payload["total_calories"]), 1)
-    base_calories = model_calories
-    protein_g = round(float(payload["protein_g"]), 1)
-    carbs_g = round(float(payload["carbs_g"]), 1)
-    fat_g = round(float(payload["fat_g"]), 1)
-    if summed_calories > 0 and model_calories < summed_calories * 0.95:
-        base_calories = round(summed_calories, 1)
-        protein_g = round(summed_protein, 1)
-        carbs_g = round(summed_carbs, 1)
-        fat_g = round(summed_fat, 1)
-
-    range_low = round(float(payload["calorie_range_low"]), 1)
-    range_high = round(float(payload["calorie_range_high"]), 1)
+    model_high = round(float(payload.get("calorie_range_high") or 0), 1)
+    model_low = round(float(payload.get("calorie_range_low") or 0), 1)
+    range_high = round(max(high_calories, model_high), 1)
+    range_low = round(min(low_calories, model_low) if model_low > 0 else low_calories, 1)
     if range_high < range_low:
         range_low, range_high = range_high, range_low
-    if range_high <= 0 and base_calories > 0:
-        range_low = round(base_calories * 0.8, 1)
-        range_high = round(base_calories * 1.25, 1)
-    if range_high < base_calories:
-        range_high = round(max(base_calories * 1.15, range_high), 1)
-    if range_low <= 0 or range_low > base_calories:
-        range_low = round(base_calories * 0.8, 1)
+    if range_high <= 0:
+        range_high = round(float(payload.get("total_calories") or 0), 1)
+        range_low = round(range_high * 0.8, 1)
 
-    # Record the high end of the calorie range, not the midpoint.
-    calories = range_high if range_high > 0 else base_calories
-    if base_calories > 0 and calories != base_calories:
-        scale = calories / base_calories
-        protein_g = round(protein_g * scale, 1)
-        carbs_g = round(carbs_g * scale, 1)
-        fat_g = round(fat_g * scale, 1)
+    calories = range_high
+    protein_g = round(high_protein, 1)
+    carbs_g = round(high_carbs, 1)
+    fat_g = round(high_fat, 1)
 
     explanation = payload["user_friendly_explanation"]
     if portion_notes:
         explanation = (
-            f"{explanation} 已尽量计入可见食材；记录热量取估算区间最大值 "
+            f"{explanation} 记录时按各食材偏高克重汇总："
             f"{calories:g} kcal（区间 {range_low:g}–{range_high:g}）："
             f"{'；'.join(portion_notes[:16])}。"
         )
