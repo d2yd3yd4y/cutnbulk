@@ -269,11 +269,8 @@ def _payload_to_result(payload: dict[str, Any]) -> NutritionEstimateResult:
     if range_low <= 0 or range_low > base_calories:
         range_low = round(base_calories * 0.8, 1)
 
-    # Record the upper-quartile calorie (75th percentile), not the midpoint.
-    if range_high > range_low:
-        calories = round(range_low + 0.75 * (range_high - range_low), 1)
-    else:
-        calories = base_calories
+    # Record the high end of the calorie range, not the midpoint.
+    calories = range_high if range_high > 0 else base_calories
     if base_calories > 0 and calories != base_calories:
         scale = calories / base_calories
         protein_g = round(protein_g * scale, 1)
@@ -283,8 +280,9 @@ def _payload_to_result(payload: dict[str, Any]) -> NutritionEstimateResult:
     explanation = payload["user_friendly_explanation"]
     if portion_notes:
         explanation = (
-            f"{explanation} 已尽量计入可见食材；记录热量取估算区间偏高侧（约前 25% / 75 分位）"
-            f"{calories:g} kcal：{'；'.join(portion_notes[:16])}。"
+            f"{explanation} 已尽量计入可见食材；记录热量取估算区间最大值 "
+            f"{calories:g} kcal（区间 {range_low:g}–{range_high:g}）："
+            f"{'；'.join(portion_notes[:16])}。"
         )
 
     uncertainty = list(payload.get("uncertainty_factors") or [])
