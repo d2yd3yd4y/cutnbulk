@@ -159,7 +159,7 @@ def _build_prompt(description: str) -> str:
 5. 每个食材都必须给出 best_estimate_grams、grams_low、grams_high，以及简短 portion_basis。
 6. 看不清时，按该食物在常见成人正餐中的正常份量推断，不要按试吃小份推断。
 7. total_calories 应约等于各食材 calories 之和，基于 best_estimate；不要另给更低的“保险总数”。
-8. calorie_range_low/high 表达波动；total_calories 取中间偏上的记录值。
+8. calorie_range_low/high 必须给出合理波动区间；total_calories 可为区间内参考中值。
 9. 不确定时宁可略高一点，也不要系统性偏低。
 
 输出要求：
@@ -245,50 +245,46 @@ def _payload_to_result(payload: dict[str, Any]) -> NutritionEstimateResult:
             )
         )
 
-    # Prefer ingredient sums so missing toppings in the headline total still count.
+    # Baseline macros from the model, preferring ingredient sums when higher.
     model_calories = round(float(payload["total_calories"]), 1)
-    calories = model_calories
+    base_calories = model_calories
     protein_g = round(float(payload["protein_g"]), 1)
     carbs_g = round(float(payload["carbs_g"]), 1)
     fat_g = round(float(payload["fat_g"]), 1)
     if summed_calories > 0 and model_calories < summed_calories * 0.95:
-        calories = round(summed_calories, 1)
+        base_calories = round(summed_calories, 1)
         protein_g = round(summed_protein, 1)
         carbs_g = round(summed_carbs, 1)
         fat_g = round(summed_fat, 1)
 
     range_low = round(float(payload["calorie_range_low"]), 1)
     range_high = round(float(payload["calorie_range_high"]), 1)
-    # Bias the usable logging range upward when the model stays too low.
-    if range_high < calories * 1.1:
-        range_high = round(calories * 1.2, 1)
-    if range_low > calories * 0.9:
-        range_low = round(calories * 0.85, 1)
-    if range_low > calories:
-        range_low = round(calories * 0.85, 1)
-    # If the point estimate sits near the bottom of a wide range, nudge it up.
-    mid = (range_low + range_high) / 2
-    if range_high > range_low and calories < mid * 0.95:
-        calories = round((mid + range_high) / 2, 1)
+    if range_high < range_low:
+        range_low, range_high = range_high, range_low
+    if range_high <= 0 and base_calories > 0:
+        range_low = round(base_calories * 0.8, 1)
+        range_high = round(base_calories * 1.25, 1)
+    if range_high < base_calories:
+        range_high = round(max(base_calories * 1.15, range_high), 1)
+    if range_low <= 0 or range_low > base_calories:
+        range_low = round(base_calories * 0.8, 1)
 
-    names = " ".join(match.name for match in matches)
-    looks_like_large_bowl = any(
-        keyword in names
-        for keyword in ("米", "饭", "三文鱼", "刺身", "salmon", "poke")
-    )
-    if looks_like_large_bowl and calories < 850:
-        # Avoid repeating the common 550–750 under-estimate for large fish-rice bowls.
-        calories = round(max(calories, min(range_high, 980)), 1)
-        if range_high < calories:
-            range_high = round(calories * 1.15, 1)
-        if range_low > calories * 0.85:
-            range_low = round(calories * 0.8, 1)
+    # Record the upper-quartile calorie (75th percentile), not the midpoint.
+    if range_high > range_low:
+        calories = round(range_low + 0.75 * (range_high - range_low), 1)
+    else:
+        calories = base_calories
+    if base_calories > 0 and calories != base_calories:
+        scale = calories / base_calories
+        protein_g = round(protein_g * scale, 1)
+        carbs_g = round(carbs_g * scale, 1)
+        fat_g = round(fat_g * scale, 1)
 
     explanation = payload["user_friendly_explanation"]
     if portion_notes:
         explanation = (
-            f"{explanation} 已尽量计入可见食材，份量取 best estimate："
-            f"{'；'.join(portion_notes[:16])}。"
+            f"{explanation} 已尽量计入可见食材；记录热量取估算区间偏高侧（约前 25% / 75 分位）"
+            f"{calories:g} kcal：{'；'.join(portion_notes[:16])}。"
         )
 
     uncertainty = list(payload.get("uncertainty_factors") or [])

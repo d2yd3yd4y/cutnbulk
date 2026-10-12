@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindWorkoutRows();
   bindTrainingParts();
   bindMealTypeFields();
+  bindMealImagePreviews();
 });
 
 function bindMealTemplates() {
@@ -84,5 +85,42 @@ function bindMealTypeFields() {
     };
     select.addEventListener("change", sync);
     sync();
+  });
+}
+
+function bindMealImagePreviews() {
+  document.querySelectorAll(".meal-form").forEach((form) => {
+    const input = form.querySelector(".meal-image-input");
+    const preview = form.querySelector(".image-preview");
+    const nameLabel = form.querySelector(".image-preview-name");
+    if (!input || !preview) return;
+
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      if (!file) {
+        if (!preview.dataset.savedSrc) {
+          preview.hidden = true;
+          preview.removeAttribute("src");
+          if (nameLabel) {
+            nameLabel.hidden = true;
+            nameLabel.textContent = "";
+          }
+        }
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      preview.src = objectUrl;
+      preview.hidden = false;
+      if (nameLabel) {
+        nameLabel.hidden = false;
+        nameLabel.textContent = `已选择：${file.name}`;
+      }
+      preview.onload = () => URL.revokeObjectURL(objectUrl);
+    });
+
+    if (preview.getAttribute("src")) {
+      preview.dataset.savedSrc = preview.getAttribute("src");
+    }
   });
 }

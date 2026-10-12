@@ -126,7 +126,7 @@ async def create_meal(
     entry_date: str,
     meal_type: str = Form(...),
     meal_name: str = Form(""),
-    description: str = Form(...),
+    description: str = Form(""),
     calories: str = Form(""),
     protein_g: str = Form(""),
     carbs_g: str = Form(""),
@@ -140,6 +140,9 @@ async def create_meal(
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
     image_path = await _save_upload(image)
+    if not description.strip() and not image_path:
+        return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
+
     meal = MealEntry(entry_date=target_date)
     estimate = _apply_meal_form(
         db=db,
@@ -168,7 +171,7 @@ async def update_meal(
     meal_id: int,
     meal_type: str = Form(...),
     meal_name: str = Form(""),
-    description: str = Form(...),
+    description: str = Form(""),
     calories: str = Form(""),
     protein_g: str = Form(""),
     carbs_g: str = Form(""),
@@ -190,6 +193,9 @@ async def update_meal(
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
     image_path = await _save_upload(image)
+    if not description.strip() and not image_path and not meal.image_path:
+        return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
+
     estimate = _apply_meal_form(
         db=db,
         meal=meal,
@@ -274,7 +280,12 @@ def _apply_meal_form(
 
     meal.meal_type = meal_type if meal_type in MEAL_TYPE_LABELS else "custom"
     meal.meal_name = meal_name.strip() or None
-    meal.description = clean_description
+    if clean_description:
+        meal.description = clean_description
+    elif estimate.dish_name:
+        meal.description = estimate.dish_name
+    elif not meal.description:
+        meal.description = "（拍照估算）"
     if image_path:
         meal.image_path = image_path
     meal.calories = _parse_float(calories, estimate.calories) or 0
