@@ -216,18 +216,13 @@ cutnbulk 会记录体重、饮食、训练等私人数据。部署到公网后�
 
 ## AI 饮食估算说明
 
-第一版优先使用本地 Food Database，不需要配置任何密钥。也可以配置 OpenAI API，在上传食物照片时使用视觉模型做增强估算。
+当前产品以拍照估算为主，不再提供食物库管理页面。
 
 估算流程：
 
-1. 根据食物名称和别名匹配 `FoodItem`
-2. 尝试识别 `100g`、`200克`、`一碗`、`两个鸡蛋`、`一杯奶茶` 等份量
-3. 按每 100g 营养数据计算热量、蛋白、碳水、脂肪
-4. 如果上传照片且没有手动填写营养数字，会优先调用 OpenAI 视觉模型
-5. 如果没有 API key、API 调用失败，或没有上传图片，则使用本地 Food Database
-6. 如果完全匹配不到，再 fallback 到 `app/services/food_ai_service.py` 中的旧本地 mock 规则
-
-食物库不会在启动时自动预置数据。可以在 `/foods/new` 手动新增；也可在 `/foods` 清空现有食物库。
+1. 如果上传照片且没有手动填写营养数字，会优先调用 OpenAI 视觉模型
+2. 如果没有 API key、API 调用失败，或没有上传图片，则使用本地文字规则估算
+3. 本地规则来自 `app/services/food_ai_service.py` / `nutrition_estimator.py` 的 fallback
 
 注意：这些估算不是医学级精确数据。中餐、外卖、火锅、烧烤等会因为油量、酱料、实际份量不同产生明显误差，建议把它作为辅助记录，并允许手动修正。
 
@@ -257,7 +252,7 @@ OPENAI_FOOD_MODEL=gpt-4.1-mini
 5. 不填写热量、蛋白、碳水、脂肪
 6. 保存后查看餐卡里的“AI 估算”、可信度、热量区间、误差来源和原材料拆解
 
-没有 `OPENAI_API_KEY` 时不会报错，会自动使用本地食物数据库/旧 mock 估算。
+没有 `OPENAI_API_KEY` 时不会报错，会自动使用本地 mock 估算。
 
 ## 项目结构
 
@@ -284,7 +279,6 @@ health_tracker/
     routers/
       calendar.py
       day.py
-      foods.py
       goal.py
       dashboard.py
       meals.py
@@ -295,8 +289,6 @@ health_tracker/
       base.html
       calendar.html
       day.html
-      foods.html
-      food_new.html
       goal.html
       dashboard.html
       meals.html
