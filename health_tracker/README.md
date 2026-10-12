@@ -9,8 +9,7 @@
 - 每日记录：体重、睡眠、疲劳感
 - 训练记录：用训练部位 + 训练备注快速记录
 - 饮食记录：每天可添加多顿饭，每顿单独记录描述、照片、热量和三大营养素
-- 食物数据库：内置常见主食、蛋白质食材、中餐菜品、外卖、饮品和零食
-- 本地饮食估算：优先使用食物数据库匹配和份量解析，匹配不到时 fallback 到旧 mock 规则
+- 拍照 / 文字饮食估算：优先 AI 拍照估算，失败时 fallback 到本地规则
 
 ## 技术栈
 
@@ -53,8 +52,6 @@ http://127.0.0.1:8000/health
 - `/day/YYYY-MM-DD`：某一天的记录页，例如 `/day/2026-07-01`
 - `/goal`：设置当前阶段、目标体重和每日建议摄入
 - `/summary`：最近 7 天趋势
-- `/foods`：查看和搜索食物库
-- `/foods/new`：新增自定义食物
 
 ## 手机端预览
 
@@ -85,13 +82,13 @@ cp .env.example .env
 DATABASE_URL=
 SECRET_KEY=
 OPENAI_API_KEY=
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 - `DATABASE_URL`：线上 PostgreSQL 连接字符串；本地留空时使用 SQLite。
 - `SECRET_KEY`：后续登录/会话功能使用；当前先预留。
 - `OPENAI_API_KEY`：后续拍照估算热量时使用。
-- `OPENAI_FOOD_MODEL`：拍照估算模型名，默认 `gpt-5.4-mini`。
+- `OPENAI_FOOD_MODEL`：拍照估算模型名，默认 `gpt-4.1-mini`。
 
 ## 部署到公网，让手机 Safari 随时访问
 
@@ -155,7 +152,7 @@ Health Check Path: /health
 DATABASE_URL=你的PostgreSQL连接字符串
 SECRET_KEY=任意长随机字符串
 OPENAI_API_KEY=可选
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 部署完成后，Render 会给你一个公网地址，例如：
@@ -192,7 +189,7 @@ Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
 DATABASE_URL=你的PostgreSQL连接字符串
 SECRET_KEY=任意长随机字符串
 OPENAI_API_KEY=可选
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
 Railway 部署完成后会提供公网域名，手机 Safari 打开该域名即可。
@@ -219,20 +216,13 @@ cutnbulk 会记录体重、饮食、训练等私人数据。部署到公网后�
 
 ## AI 饮食估算说明
 
-第一版优先使用本地 Food Database，不需要配置任何密钥。也可以配置 OpenAI API，在上传食物照片时使用视觉模型做增强估算。
+当前产品以拍照估算为主，不再提供食物库管理页面。
 
 估算流程：
 
-1. 根据食物名称和别名匹配 `FoodItem`
-2. 尝试识别 `100g`、`200克`、`一碗`、`两个鸡蛋`、`一杯奶茶` 等份量
-3. 按每 100g 营养数据计算热量、蛋白、碳水、脂肪
-4. 如果上传照片且没有手动填写营养数字，会优先调用 OpenAI 视觉模型
-5. 如果没有 API key、API 调用失败，或没有上传图片，则使用本地 Food Database
-6. 如果完全匹配不到，再 fallback 到 `app/services/food_ai_service.py` 中的旧本地 mock 规则
-
-食物库会在项目启动时自动初始化，使用 `normalized_name` 避免重复插入。
-
-可以在 `/foods/new` 新增自定义食物，新增后会参与后续饮食估算。
+1. 如果上传照片且没有手动填写营养数字，会优先调用 OpenAI 视觉模型
+2. 如果没有 API key、API 调用失败，或没有上传图片，则使用本地文字规则估算
+3. 本地规则来自 `app/services/food_ai_service.py` / `nutrition_estimator.py` 的 fallback
 
 注意：这些估算不是医学级精确数据。中餐、外卖、火锅、烧烤等会因为油量、酱料、实际份量不同产生明显误差，建议把它作为辅助记录，并允许手动修正。
 
@@ -248,10 +238,10 @@ cp .env.example .env
 
 ```text
 OPENAI_API_KEY=你的 key
-OPENAI_FOOD_MODEL=gpt-5.4-mini
+OPENAI_FOOD_MODEL=gpt-4.1-mini
 ```
 
-如果要切换模型，可以把 `OPENAI_FOOD_MODEL` 改成其他支持视觉输入的模型，例如未来的 `gpt-5.5`。
+如果要切换模型，可以把 `OPENAI_FOOD_MODEL` 改成其他支持视觉输入的模型，例如 `gpt-4.1`（更贵）或保持 `gpt-4.1-mini`。
 
 拍照估算测试：
 
@@ -262,7 +252,7 @@ OPENAI_FOOD_MODEL=gpt-5.4-mini
 5. 不填写热量、蛋白、碳水、脂肪
 6. 保存后查看餐卡里的“AI 估算”、可信度、热量区间、误差来源和原材料拆解
 
-没有 `OPENAI_API_KEY` 时不会报错，会自动使用本地食物数据库/旧 mock 估算。
+没有 `OPENAI_API_KEY` 时不会报错，会自动使用本地 mock 估算。
 
 ## 项目结构
 
@@ -280,8 +270,8 @@ health_tracker/
     services/
       food_ai_service.py
       food_import_service.py
-      food_seed_service.py
       goal_service.py
+      upload_service.py
       insight_service.py
       nutrition_estimator.py
       vision_food_estimator.py
@@ -289,7 +279,6 @@ health_tracker/
     routers/
       calendar.py
       day.py
-      foods.py
       goal.py
       dashboard.py
       meals.py
@@ -300,8 +289,6 @@ health_tracker/
       base.html
       calendar.html
       day.html
-      foods.html
-      food_new.html
       goal.html
       dashboard.html
       meals.html

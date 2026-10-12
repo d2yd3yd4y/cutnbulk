@@ -11,8 +11,8 @@
   <input type="text" name="meal_name" value="{{ meal.meal_name if meal and meal.meal_name else '' }}" placeholder="例如：下午加餐、火锅">
 </label>
 <label class="full-width">
-  食物描述
-  <textarea name="description" rows="3" required placeholder="例如：鸡胸肉、米饭、西兰花">{{ meal.description if meal else '' }}</textarea>
+  食物描述（可选，只拍照也可以）
+  <textarea name="description" rows="3" placeholder="可选：例如鸡胸肉、米饭；也可以只上传照片">{{ meal.description if meal else '' }}</textarea>
 </label>
 <div class="form-grid compact full-width">
   <label>
@@ -32,18 +32,23 @@
     <input type="number" inputmode="decimal" step="0.1" name="fat_g" value="{{ meal.fat_g if meal else '' }}" placeholder="自动估算">
   </label>
 </div>
-<div class="image-row full-width">
+<div class="image-field full-width">
   <label class="photo-picker">
-    <input type="file" name="image" accept="image/*">
-    <span>添加照片</span>
+    <input class="meal-image-input" type="file" name="image" accept="image/*" capture="environment">
+    <span>添加 / 更换照片</span>
   </label>
-  {% if meal and meal.image_path %}
-    <a class="food-thumb" href="{{ meal.image_path }}" target="_blank">
-      <img src="{{ meal.image_path }}" alt="食物照片">
-    </a>
-  {% endif %}
+  <div class="image-preview-card {% if meal and meal.image_path %}has-image{% endif %}">
+    {% if meal and meal.image_path %}
+      <img class="image-preview" src="{{ meal.image_path }}" alt="已选照片预览" data-saved-src="{{ meal.image_path }}">
+      <p class="image-preview-name">当前已保存照片</p>
+    {% else %}
+      <img class="image-preview" alt="照片预览">
+      <p class="image-preview-placeholder">还没有选择照片</p>
+      <p class="image-preview-name"></p>
+    {% endif %}
+  </div>
 </div>
-<p class="estimate-hint full-width">上传照片且不填写营养数字时，会优先使用 AI 拍照估算；结果只是估算，可手动修正。</p>
+<p class="estimate-hint full-width">可只拍照估算：上传照片且不填营养数字时会优先 AI 估算；描述可选。结果可手动修正。</p>
 <label class="full-width">
   备注
   <input type="text" name="notes" value="{{ meal.notes if meal and meal.notes else '' }}" placeholder="可选">
