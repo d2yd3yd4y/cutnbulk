@@ -18,6 +18,12 @@
 
   <a class="primary-btn full-width" href="/foods/new">新增自定义食物</a>
 
+  {% if total_count %}
+    <form class="full-width" action="/foods/clear" method="post" onsubmit="return confirm('确定清空全部食物库吗？清空后不会自动恢复内置食物。');">
+      <button class="danger-btn full-width" type="submit">清空食物库</button>
+    </form>
+  {% endif %}
+
   <div class="food-list">
     {% for food in foods %}
       <article class="food-card">

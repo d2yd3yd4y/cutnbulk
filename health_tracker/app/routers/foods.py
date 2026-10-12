@@ -8,8 +8,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import FoodItem
-from app.services.food_seed_service import normalize_food_name
+from app.models import FoodItem, MealFoodMatch
+from app.utils.food_names import normalize_food_name
 
 
 router = APIRouter(prefix="/foods", tags=["foods"])
@@ -53,6 +53,15 @@ def foods_page(
             "active_page": "foods",
         },
     )
+
+
+@router.post("/clear")
+def clear_foods(db: Session = Depends(get_db)):
+    """Remove all foods from the local food library."""
+    db.query(MealFoodMatch).update({MealFoodMatch.food_item_id: None})
+    db.query(FoodItem).delete()
+    db.commit()
+    return RedirectResponse(url="/foods", status_code=303)
 
 
 @router.get("/new")
