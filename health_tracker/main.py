@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine, ensure_sqlite_schema
-from app.routers import body, calendar, day, foods, goal, meals, summary, weekly, workouts
+from app.routers import body, calendar, day, goal, meals, summary, weekly, workouts
 
 
 Base.metadata.create_all(bind=engine)
@@ -20,7 +20,6 @@ def health_check():
 
 app.include_router(calendar.router)
 app.include_router(day.router)
-app.include_router(foods.router)
 app.include_router(goal.router)
 app.include_router(summary.router)
 app.include_router(meals.router)

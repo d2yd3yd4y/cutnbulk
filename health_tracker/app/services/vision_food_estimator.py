@@ -102,7 +102,7 @@ def estimate_food_from_image(
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         fallback = estimate_meal_nutrition(db, description, image_path)
-        return _with_fallback_reason(fallback, "未配置 OPENAI_API_KEY，已使用本地食物库估算。")
+        return _with_fallback_reason(fallback, "未配置 OPENAI_API_KEY，已使用本地估算。")
 
     try:
         image_data_url = _image_to_data_url(image_path)
@@ -134,7 +134,7 @@ def estimate_food_from_image(
         fallback = estimate_meal_nutrition(db, description, image_path)
         return _with_fallback_reason(
             fallback,
-            f"OpenAI 视觉估算失败，已使用本地食物库估算。错误：{exc}",
+            f"OpenAI 视觉估算失败，已使用本地估算。错误：{exc}",
         )
 
 
