@@ -248,12 +248,12 @@ def _fallback_estimate(description: str, image_path: str | None) -> NutritionEst
         fat_g=estimate.fat_g,
         confidence=0.35,
         confidence_label="low",
-        reasoning=f"食物库未匹配到明确条目，使用旧版本地规则估算：{estimate.reasoning}",
+        reasoning=f"未匹配到明确食材条目，使用本地规则估算：{estimate.reasoning}",
         matched_foods=[],
         source="fallback",
         calorie_range_low=round(estimate.calories * 0.65, 1),
         calorie_range_high=round(estimate.calories * 1.35, 1),
-        uncertainty_factors=["食物库未匹配", "份量未知", "旧规则估算"],
+        uncertainty_factors=["未匹配到食材条目", "份量未知", "旧规则估算"],
     )
 
 
