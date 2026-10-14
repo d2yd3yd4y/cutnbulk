@@ -43,9 +43,6 @@ def summary_page(request: Request, db: Session = Depends(get_db)):
     protein = [totals["protein_g"] for totals in daily_meal_totals]
     carbs = [totals["carbs_g"] for totals in daily_meal_totals]
     fat = [totals["fat_g"] for totals in daily_meal_totals]
-    training_days = len(
-        [entry for entry in entries if entry.training_parts and entry.training_parts != "休息"]
-    )
     summary = {
         "recorded_days": len(recent_days),
         "average_weight": _avg(weights),
@@ -53,8 +50,7 @@ def summary_page(request: Request, db: Session = Depends(get_db)):
         "average_protein": _avg(protein),
         "average_carbs": _avg(carbs),
         "average_fat": _avg(fat),
-        "training_days": training_days,
-        "advice": _build_advice(len(recent_days), _avg(protein), _avg(calories), training_days),
+        "advice": _build_advice(len(recent_days), _avg(protein), _avg(calories)),
     }
 
     return templates.TemplateResponse(
@@ -84,14 +80,13 @@ def _build_advice(
     recorded_days: int,
     average_protein: float | None,
     average_calories: float | None,
-    training_days: int,
 ) -> str:
     if recorded_days < 3:
         return "先记录满 3 天，趋势会更有参考价值。"
     if average_protein is not None and average_protein < 90:
         return "最近蛋白质偏低，优先把每餐蛋白质补足。"
-    if training_days >= 4 and average_calories is not None and average_calories < 1800:
-        return "训练天数不少，热量不要压得太低，注意恢复。"
+    if average_calories is not None and average_calories < 1400:
+        return "最近平均热量偏低，注意是否吃太少，可对照目标再微调。"
     return "这一周记录节奏不错，继续保持简单稳定。"
 
 

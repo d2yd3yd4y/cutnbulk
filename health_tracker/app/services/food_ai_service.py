@@ -5,7 +5,7 @@ from app.schemas import NutritionEstimate
 
 
 TEMPLATE_ESTIMATES = {
-    "鸡胸肉 + 米饭 + 西兰花": NutritionEstimate(520, 45, 58, 10, 0.82, "按常见健身餐份量估算。"),
+    "鸡胸肉 + 米饭 + 西兰花": NutritionEstimate(520, 45, 58, 10, 0.82, "按常见家常份量估算。"),
     "牛肉面": NutritionEstimate(680, 32, 92, 20, 0.76, "按一碗普通牛肉面估算。"),
     "黄焖鸡米饭": NutritionEstimate(780, 38, 96, 26, 0.74, "按一份外卖黄焖鸡米饭估算。"),
     "沙拉 + 鸡蛋": NutritionEstimate(360, 20, 24, 20, 0.78, "按含两个鸡蛋和少量酱汁的沙拉估算。"),

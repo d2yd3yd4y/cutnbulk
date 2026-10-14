@@ -75,36 +75,6 @@ class MealFoodMatch(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class WorkoutEntry(TimestampMixin, Base):
-    __tablename__ = "workout_entries"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    entry_date: Mapped[date] = mapped_column(Date, index=True)
-    exercise: Mapped[str] = mapped_column(String(100), index=True)
-    sets: Mapped[int] = mapped_column(Integer, default=0)
-    reps: Mapped[int] = mapped_column(Integer, default=0)
-    weight_kg: Mapped[float] = mapped_column(Float, default=0)
-    rpe: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    to_failure: Mapped[bool] = mapped_column(Boolean, default=False)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    @property
-    def volume(self) -> float:
-        return self.sets * self.reps * self.weight_kg
-
-
-class BodyMetric(TimestampMixin, Base):
-    __tablename__ = "body_metrics"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    entry_date: Mapped[date] = mapped_column(Date, index=True, unique=True)
-    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
-    waist_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
-    sleep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
-    fatigue_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
 class DailyEntry(TimestampMixin, Base):
     __tablename__ = "daily_entries"
 
@@ -114,6 +84,7 @@ class DailyEntry(TimestampMixin, Base):
     waist_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     sleep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     fatigue_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Legacy columns kept for existing SQLite DBs; no longer exposed in UI.
     training_parts: Mapped[str | None] = mapped_column(Text, nullable=True)
     training_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     food_description: Mapped[str | None] = mapped_column(Text, nullable=True)

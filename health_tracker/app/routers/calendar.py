@@ -75,18 +75,10 @@ def calendar_page(
     }
     weights = [entry.weight_kg for entry in current_month_entries if entry.weight_kg is not None]
     calories = [totals["calories"] for totals in current_month_meal_totals]
-    training_days = len(
-        [
-            entry
-            for entry in current_month_entries
-            if entry.training_parts and entry.training_parts != "休息"
-        ]
-    )
     month_summary = {
         "recorded_days": len(recorded_dates),
         "average_weight": _avg(weights),
         "average_calories": _avg(calories),
-        "training_days": training_days,
     }
     active_goal = get_active_goal(db)
     today_goal_progress = get_goal_progress_for_day(db, today)

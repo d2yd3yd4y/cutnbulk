@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine, ensure_sqlite_schema
-from app.routers import body, calendar, day, goal, meals, summary, weekly, workouts
+from app.routers import calendar, day, goal, meals, summary
 
 
 Base.metadata.create_all(bind=engine)
@@ -23,6 +23,3 @@ app.include_router(day.router)
 app.include_router(goal.router)
 app.include_router(summary.router)
 app.include_router(meals.router)
-app.include_router(workouts.router)
-app.include_router(body.router)
-app.include_router(weekly.router)

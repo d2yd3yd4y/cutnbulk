@@ -60,24 +60,6 @@
     </section>
 
     <section class="record-section">
-      <div class="section-title">
-        <h2>今天练了什么？</h2>
-      </div>
-      <div class="part-options">
-        {% for part in training_parts %}
-          <label class="part-chip">
-            <input type="checkbox" name="training_parts" value="{{ part }}" {% if part in selected_parts %}checked{% endif %}>
-            <span>{{ part }}</span>
-          </label>
-        {% endfor %}
-      </div>
-      <label class="stacked-field">
-        训练备注
-        <textarea name="training_notes" rows="3" placeholder="例如：卧推 4 组，飞鸟 3 组，状态一般">{{ entry.training_notes if entry and entry.training_notes else '' }}</textarea>
-      </label>
-    </section>
-
-    <section class="record-section">
       <label class="stacked-field">
         今日备注
         <textarea name="daily_note" rows="2" placeholder="状态、外食、特殊情况">{{ entry.daily_note if entry and entry.daily_note else '' }}</textarea>
