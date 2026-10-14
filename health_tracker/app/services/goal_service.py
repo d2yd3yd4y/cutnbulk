@@ -125,7 +125,7 @@ def build_goal_note(
     if mode == "cut":
         deficit = abs(daily_energy_delta)
         if deficit > 750:
-            notes.append("这个减脂速度偏激进，可能影响训练表现和恢复。")
+            notes.append("这个减脂速度偏激进，建议拉长周期并保证蛋白质。")
         elif 300 <= deficit <= 500:
             notes.append("这是相对稳妥的减脂区间。")
         else:
@@ -137,9 +137,9 @@ def build_goal_note(
         elif 150 <= surplus <= 300:
             notes.append("这是比较稳妥的增肌区间。")
         else:
-            notes.append("增肌期优先保证训练表现和蛋白质摄入。")
+            notes.append("增肌期优先保证蛋白质摄入和稳定热量盈余。")
     else:
-        notes.append("维持阶段适合观察训练表现、体重和饮食稳定性。")
+        notes.append("维持阶段适合观察体重和饮食稳定性。")
 
     return " ".join(notes)
 

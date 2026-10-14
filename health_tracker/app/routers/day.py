@@ -18,15 +18,12 @@ from app.services.vision_food_estimator import estimate_food_from_image
 router = APIRouter(prefix="/day", tags=["day"])
 templates = Jinja2Templates(directory="app/templates")
 UPLOAD_DIR = Path("app/uploads")
-TRAINING_PARTS = ["胸", "背", "腿", "肩", "手臂", "核心", "有氧", "休息"]
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 MEAL_TYPE_LABELS = {
     "breakfast": "早餐",
     "lunch": "午餐",
     "dinner": "晚餐",
     "snack": "加餐",
-    "pre_workout": "训练前",
-    "post_workout": "训练后",
     "night": "夜宵",
     "custom": "自定义",
 }
@@ -63,7 +60,6 @@ def day_page(
     uncertainty_by_meal = {
         meal.id: _parse_uncertainty_factors(meal.uncertainty_factors) for meal in meals
     }
-    selected_parts = _split_training_parts(entry.training_parts if entry else None)
     return templates.TemplateResponse(
         name="day.html",
         request=request,
@@ -73,8 +69,6 @@ def day_page(
             "entry_date": target_date,
             "date_label": _format_date_label(target_date),
             "today": date.today(),
-            "training_parts": TRAINING_PARTS,
-            "selected_parts": selected_parts,
             "meals": meals,
             "meal_totals": _meal_totals(meals),
             "matches_by_meal": matches_by_meal,
@@ -95,8 +89,6 @@ async def save_day(
     waist_cm: str = Form(""),
     sleep_hours: str = Form(""),
     fatigue_level: str = Form(""),
-    training_parts: list[str] | None = Form(None),
-    training_notes: str = Form(""),
     daily_note: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -113,8 +105,6 @@ async def save_day(
     entry.waist_cm = _parse_float(waist_cm)
     entry.sleep_hours = _parse_float(sleep_hours)
     entry.fatigue_level = _parse_int(fatigue_level)
-    entry.training_parts = ",".join(training_parts or [])
-    entry.training_notes = training_notes.strip() or None
     entry.daily_note = daily_note.strip() or None
     db.commit()
 
@@ -241,12 +231,6 @@ def _parse_date(value: str) -> date | None:
 
 def _format_date_label(value: date) -> str:
     return f"{value.month} 月 {value.day} 日 {WEEKDAY_LABELS[value.weekday()]}"
-
-
-def _split_training_parts(value: str | None) -> list[str]:
-    if not value:
-        return []
-    return [part for part in value.split(",") if part]
 
 
 def _meal_totals(meals: list[MealEntry]) -> dict[str, float]:

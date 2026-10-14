@@ -1,13 +1,12 @@
-# cutnbulk 本地健身饮食日历
+# cutnbulk 本地饮食日历
 
-这是一个个人使用的极简健身饮食记录 App，使用 FastAPI + Jinja2 + SQLAlchemy 构建。它可以在本地用 SQLite 运行，也可以部署到公网并连接 PostgreSQL，让手机 Safari 随时访问。
+这是一个个人使用的极简饮食记录 App，使用 FastAPI + Jinja2 + SQLAlchemy 构建。它可以在本地用 SQLite 运行，也可以部署到公网并连接 PostgreSQL，让手机 Safari 随时访问。
 
 ## 功能
 
 - 首页日历：按月查看每日记录摘要
 - 目标设置：支持减脂、维持、增肌，并估算每日建议摄入
-- 每日记录：体重、睡眠、疲劳感
-- 训练记录：用训练部位 + 训练备注快速记录
+- 每日记录：体重、睡眠、疲劳感、备注
 - 饮食记录：每天可添加多顿饭，每顿单独记录描述、照片、热量和三大营养素
 - 拍照 / 文字饮食估算：优先 AI 拍照估算，失败时 fallback 到本地规则
 
@@ -206,7 +205,7 @@ Railway 部署完成后会提供公网域名，手机 Safari 打开该域名即�
 
 ## 数据安全提醒
 
-cutnbulk 会记录体重、饮食、训练等私人数据。部署到公网后请注意：
+cutnbulk 会记录体重、饮食等私人数据。部署到公网后请注意：
 
 - 线上版本不建议公开给别人使用。
 - 后续应该加入登录系统。
@@ -271,30 +270,23 @@ health_tracker/
       food_ai_service.py
       food_import_service.py
       goal_service.py
-      upload_service.py
-      insight_service.py
       nutrition_estimator.py
       vision_food_estimator.py
-      weekly_review_service.py
     routers/
       calendar.py
       day.py
       goal.py
-      dashboard.py
       meals.py
-      workouts.py
-      body.py
-      weekly.py
+      summary.py
     templates/
       base.html
       calendar.html
       day.html
       goal.html
-      dashboard.html
       meals.html
-      workouts.html
-      body.html
-      weekly.html
+      summary.html
+      partials/
+        meal_form_fields.html
     static/
       images/
         logo.png

@@ -1,6 +1,6 @@
-# 饮食 + 训练 + 身体数据记录 MVP
+# cutnbulk 饮食日历
 
-本仓库包含一个本地运行的 Python/FastAPI 健康记录 Web App MVP，项目代码位于 `health_tracker/`。
+本仓库包含一个本地运行的 Python/FastAPI 饮食记录 Web App，项目代码位于 `health_tracker/`。
 
 进入项目目录查看完整说明：
 

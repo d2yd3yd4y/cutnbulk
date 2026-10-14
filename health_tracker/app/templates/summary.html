@@ -36,10 +36,6 @@
       <span>平均脂肪</span>
       <strong>{{ summary.average_fat if summary.average_fat is not none else "-" }} g</strong>
     </article>
-    <article class="summary-card wide">
-      <span>训练天数</span>
-      <strong>{{ summary.training_days }} 天</strong>
-    </article>
   </div>
 
   <article class="advice-card">
@@ -59,7 +55,13 @@
           <a href="/day/{{ day_key }}" class="mobile-list-item">
             <div>
               <strong>{{ day_key[5:].replace("-", ".") }}</strong>
-              <span>{{ entry.training_parts.replace(",", "/") if entry and entry.training_parts else "未记录训练" }}</span>
+              <span>
+                {% if entry and entry.weight_kg is not none %}
+                  {{ entry.weight_kg }} kg
+                {% else %}
+                  {{ "已记录饮食" if meal_total else "暂无详情" }}
+                {% endif %}
+              </span>
             </div>
             <em>{{ meal_total.calories|round|int if meal_total else "-" }} kcal</em>
           </a>
