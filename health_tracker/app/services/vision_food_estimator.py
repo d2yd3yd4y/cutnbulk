@@ -10,11 +10,10 @@ from openai import OpenAI
 from PIL import Image
 from sqlalchemy.orm import Session
 
-from app.database import BASE_DIR
+from app.config import BASE_DIR
 from app.services.nutrition_estimator import (
     MatchedFood,
     NutritionEstimateResult,
-    estimate_meal_nutrition,
 )
 
 
@@ -90,19 +89,19 @@ def estimate_food_from_image(
     db: Session,
     image_path: str | None,
     description: str = "",
+    user_id: str | None = None,
 ) -> NutritionEstimateResult:
-    """Estimate meal nutrition from a photo, with local fallback.
+    """Estimate meal nutrition from a photo.
 
-    Missing API key or API errors never break meal saving; local food database
-    estimation remains the fallback path.
+    Manual callers should not invoke this. Missing API key or API errors do not
+    invent nutrition numbers; they return an explicit failed estimate.
     """
     if not image_path:
-        return estimate_meal_nutrition(db, description)
+        return _failed_estimate("没有可用照片，无法进行视觉估算。")
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        fallback = estimate_meal_nutrition(db, description, image_path)
-        return _with_fallback_reason(fallback, "未配置 OPENAI_API_KEY，已使用本地估算。")
+        return _failed_estimate("未配置 OPENAI_API_KEY，无法进行 AI 拍照估算。请手动填写营养数字。")
 
     try:
         image_data_url = _image_to_data_url(image_path)
@@ -130,12 +129,26 @@ def estimate_food_from_image(
         )
         payload = json.loads(response.output_text)
         return _payload_to_result(payload)
-    except Exception as exc:  # Keep saving resilient for local-first MVP.
-        fallback = estimate_meal_nutrition(db, description, image_path)
-        return _with_fallback_reason(
-            fallback,
-            f"OpenAI 视觉估算失败，已使用本地估算。错误：{exc}",
-        )
+    except Exception as exc:  # Keep saving resilient; do not invent macros.
+        return _failed_estimate(f"OpenAI 视觉估算失败：{exc}。请手动填写营养数字。")
+
+
+def _failed_estimate(reason: str) -> NutritionEstimateResult:
+    return NutritionEstimateResult(
+        dish_name="（估算失败）",
+        calories=0,
+        protein_g=0,
+        carbs_g=0,
+        fat_g=0,
+        confidence=0,
+        confidence_label="low",
+        reasoning=reason,
+        matched_foods=[],
+        source="vision_failed",
+        calorie_range_low=None,
+        calorie_range_high=None,
+        uncertainty_factors=["视觉估算未成功"],
+    )
 
 
 def _build_prompt(description: str) -> str:
@@ -171,7 +184,12 @@ def _build_prompt(description: str) -> str:
 
 
 def _image_to_data_url(image_path: str) -> str:
-    path = _resolve_image_path(image_path)
+    from app.services.storage import storage_service
+
+    path = storage_service.open_local_file(image_path)
+    if path is None:
+        # Legacy absolute/relative path support for older local DBs.
+        path = _resolve_image_path(image_path)
     with Image.open(path) as image:
         image = image.convert("RGB")
         image.thumbnail((MAX_IMAGE_SIZE, MAX_IMAGE_SIZE))

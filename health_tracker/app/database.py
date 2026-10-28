@@ -1,38 +1,16 @@
-import os
-from pathlib import Path
+from collections.abc import Generator
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - python-dotenv is optional at import time.
-    load_dotenv = None
-
-if load_dotenv:
-    load_dotenv()
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_SQLITE_URL = f"sqlite:///{BASE_DIR / 'health_tracker.db'}"
+from app.config import get_settings
 
 
-def _database_url() -> str:
-    url = os.getenv("DATABASE_URL", "").strip()
-    if not url:
-        return DEFAULT_SQLITE_URL
-
-    # Some hosts expose postgres:// URLs; SQLAlchemy expects postgresql://.
-    if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql://", 1)
-    return url
-
-
-DATABASE_URL = _database_url()
-IS_SQLITE = DATABASE_URL.startswith("sqlite")
-connect_args = {"check_same_thread": False} if IS_SQLITE else {}
+settings = get_settings()
+connect_args = {"check_same_thread": False} if settings.is_sqlite else {}
 
 engine = create_engine(
-    DATABASE_URL,
+    settings.database_url,
     connect_args=connect_args,
     pool_pre_ping=True,
 )
@@ -43,7 +21,7 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
@@ -51,26 +29,10 @@ def get_db():
         db.close()
 
 
-def ensure_sqlite_schema():
-    """Apply tiny local schema fixes for existing MVP SQLite databases."""
-    if engine.dialect.name != "sqlite":
-        return
-
-    with engine.begin() as connection:
-        meal_columns = {
-            row[1] for row in connection.execute(text("PRAGMA table_info(meal_entries)"))
-        }
-        if meal_columns and "meal_name" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN meal_name VARCHAR(80)"))
-        if meal_columns and "estimate_confidence" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_confidence FLOAT"))
-        if meal_columns and "estimate_reasoning" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_reasoning TEXT"))
-        if meal_columns and "estimate_source" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN estimate_source VARCHAR(40)"))
-        if meal_columns and "calorie_range_low" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN calorie_range_low FLOAT"))
-        if meal_columns and "calorie_range_high" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN calorie_range_high FLOAT"))
-        if meal_columns and "uncertainty_factors" not in meal_columns:
-            connection.execute(text("ALTER TABLE meal_entries ADD COLUMN uncertainty_factors TEXT"))
+def reset_engine() -> None:
+    """Rebuild engine after settings cache reset (tests only)."""
+    global engine, SessionLocal, settings
+    settings = get_settings()
+    connect = {"check_same_thread": False} if settings.is_sqlite else {}
+    engine = create_engine(settings.database_url, connect_args=connect, pool_pre_ping=True)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

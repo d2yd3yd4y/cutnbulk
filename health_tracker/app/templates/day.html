@@ -39,6 +39,7 @@
   </div>
 
   <form class="daily-form" action="/day/{{ entry_date.isoformat() }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <section class="record-section">
       <div class="section-title">
         <h2>身体</h2>
@@ -100,14 +101,18 @@
                 </span>
                 {% if meal.estimate_source == "vision_ai" %}
                   <span class="ai-label">AI 估算</span>
-                {% elif meal.estimate_source == "fallback" %}
+                {% elif meal.estimate_source == "vision_failed" %}
+                  <span class="fallback-label">估算失败</span>
+                {% elif meal.estimate_source == "manual" %}
+                  <span class="fallback-label">手动</span>
+                {% elif meal.estimate_source == "food_database" or meal.estimate_source == "fallback" %}
                   <span class="fallback-label">本地估算</span>
                 {% endif %}
                 <h3>{{ meal.description }}</h3>
               </div>
               {% if meal.image_path %}
-                <a class="meal-thumb" href="{{ meal.image_path }}" target="_blank">
-                  <img src="{{ meal.image_path }}" alt="食物照片">
+                <a class="meal-thumb" href="/media/meals/{{ meal.id }}" target="_blank">
+                  <img src="/media/meals/{{ meal.id }}" alt="食物照片">
                 </a>
               {% endif %}
             </div>
@@ -163,6 +168,7 @@
                 </form>
               </details>
               <form action="/day/{{ entry_date.isoformat() }}/meals/{{ meal.id }}/delete" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button class="danger-btn" type="submit">删除</button>
               </form>
             </div>

@@ -144,18 +144,22 @@ def build_goal_note(
     return " ".join(notes)
 
 
-def get_active_goal(db: Session) -> GoalSetting | None:
+def get_active_goal(db: Session, user_id: str) -> GoalSetting | None:
     return (
         db.query(GoalSetting)
-        .filter(GoalSetting.is_active.is_(True))
+        .filter(GoalSetting.user_id == user_id, GoalSetting.is_active.is_(True))
         .order_by(GoalSetting.updated_at.desc(), GoalSetting.id.desc())
         .first()
     )
 
 
-def get_goal_progress_for_day(db: Session, target_date: date) -> dict:
-    goal = get_active_goal(db)
-    meals = db.query(MealEntry).filter(MealEntry.entry_date == target_date).all()
+def get_goal_progress_for_day(db: Session, user_id: str, target_date: date) -> dict:
+    goal = get_active_goal(db, user_id)
+    meals = (
+        db.query(MealEntry)
+        .filter(MealEntry.user_id == user_id, MealEntry.entry_date == target_date)
+        .all()
+    )
     consumed = round(sum(meal.calories or 0 for meal in meals), 1)
     recommended = goal.recommended_calories if goal else None
     remaining = round(recommended - consumed, 1) if recommended is not None else None

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}注册 · cutnbulk{% endblock %}
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card">
+    <h1>注册</h1>
+    <p class="muted">创建账号，开始记录饮食</p>
+    {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
+    {% if message %}<div class="form-success">{{ message }}</div>{% endif %}
+    <form method="post" action="/register" class="auth-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next_path }}">
+      <label>
+        邮箱
+        <input type="email" name="email" value="{{ email }}" required autocomplete="email">
+      </label>
+      <label>
+        密码
+        <input type="password" name="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <label>
+        确认密码
+        <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+      </label>
+      <button class="primary-btn large full-width" type="submit">创建账号</button>
+    </form>
+    <div class="auth-links">
+      <a href="/login?next={{ next_path }}">已有账号？去登录</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

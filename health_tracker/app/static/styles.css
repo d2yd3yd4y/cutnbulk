@@ -1316,3 +1316,73 @@ td {
     gap: 8px;
   }
 }
+
+/* Auth pages */
+.auth-page {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 0 40px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+.auth-card h1 {
+  margin: 0 0 6px;
+  font-size: 1.7rem;
+}
+.auth-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+.auth-form input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.form-error,
+.form-success {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+}
+.form-error {
+  background: #ffe8e5;
+  color: #8a1f11;
+}
+.form-success {
+  background: #e7f7ee;
+  color: #146c43;
+}
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logout-form {
+  margin: 0;
+}
+.logout-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.full-width {
+  width: 100%;
+}

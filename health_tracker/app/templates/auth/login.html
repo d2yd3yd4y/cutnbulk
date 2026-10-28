@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}登录 · cutnbulk{% endblock %}
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card">
+    <h1>登录</h1>
+    <p class="muted">进入你的饮食日历</p>
+    {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
+    {% if message %}<div class="form-success">{{ message }}</div>{% endif %}
+    <form method="post" action="/login" class="auth-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next_path }}">
+      <label>
+        邮箱
+        <input type="email" name="email" value="{{ email }}" required autocomplete="email">
+      </label>
+      <label>
+        密码
+        <input type="password" name="password" required autocomplete="current-password">
+      </label>
+      <button class="primary-btn large full-width" type="submit">登录</button>
+    </form>
+    <div class="auth-links">
+      <a href="/forgot-password">忘记密码</a>
+      <a href="/register?next={{ next_path }}">注册账号</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
