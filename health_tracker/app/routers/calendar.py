@@ -3,28 +3,29 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import CurrentUser
 from app.models import DailyEntry, MealEntry
 from app.services.goal_service import MODE_LABELS, get_active_goal, get_goal_progress_for_day
+from app.templating import render
 
 
 router = APIRouter(tags=["calendar"])
-templates = Jinja2Templates(directory="app/templates")
 
 WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"]
 
 
 @router.get("/today")
-def today_redirect():
+def today_redirect(user: CurrentUser):
     return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
 
 @router.get("/")
 def calendar_page(
     request: Request,
+    user: CurrentUser,
     year: int | None = Query(None),
     month: int | None = Query(None),
     db: Session = Depends(get_db),
@@ -47,18 +48,28 @@ def calendar_page(
     visible_end = month_calendar[-1][-1]
     entries = (
         db.query(DailyEntry)
-        .filter(DailyEntry.entry_date >= visible_start, DailyEntry.entry_date <= visible_end)
+        .filter(
+            DailyEntry.user_id == user.id,
+            DailyEntry.entry_date >= visible_start,
+            DailyEntry.entry_date <= visible_end,
+        )
         .all()
     )
     entries_by_date = {entry.entry_date.isoformat(): entry for entry in entries}
     meals = (
         db.query(MealEntry)
-        .filter(MealEntry.entry_date >= visible_start, MealEntry.entry_date <= visible_end)
+        .filter(
+            MealEntry.user_id == user.id,
+            MealEntry.entry_date >= visible_start,
+            MealEntry.entry_date <= visible_end,
+        )
         .all()
     )
     meal_totals_by_date = _meal_totals_by_date(meals)
     current_month_entries = [
-        entry for entry in entries if entry.entry_date.year == current_year and entry.entry_date.month == current_month
+        entry
+        for entry in entries
+        if entry.entry_date.year == current_year and entry.entry_date.month == current_month
     ]
     current_month_meal_totals = [
         totals
@@ -80,14 +91,13 @@ def calendar_page(
         "average_weight": _avg(weights),
         "average_calories": _avg(calories),
     }
-    active_goal = get_active_goal(db)
-    today_goal_progress = get_goal_progress_for_day(db, today)
+    active_goal = get_active_goal(db, user.id)
+    today_goal_progress = get_goal_progress_for_day(db, user.id, today)
 
-    return templates.TemplateResponse(
-        name="calendar.html",
-        request=request,
-        context={
-            "request": request,
+    return render(
+        request,
+        "calendar.html",
+        {
             "today": today,
             "first_day": first_day,
             "weeks": month_calendar,
@@ -104,6 +114,7 @@ def calendar_page(
             "mode_labels": MODE_LABELS,
             "active_page": "calendar",
         },
+        user=user,
     )
 
 

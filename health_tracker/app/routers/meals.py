@@ -1,20 +1,21 @@
+"""Legacy /meals page kept for compatibility; scoped to current user."""
+
 from datetime import date
-from pathlib import Path
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import CurrentUser
 from app.models import MealEntry
-from app.services.food_ai_service import TEMPLATE_ESTIMATES, estimate_food_nutrition
+from app.security.csrf import validate_csrf
+from app.services.nutrition_estimator import estimate_meal_nutrition
+from app.services.storage import StorageError, storage_service
+from app.templating import render
 
 
 router = APIRouter(prefix="/meals", tags=["meals"])
-templates = Jinja2Templates(directory="app/templates")
-UPLOAD_DIR = Path("app/uploads")
 MEAL_TYPE_LABELS = {
     "breakfast": "早餐",
     "lunch": "午餐",
@@ -25,15 +26,20 @@ MEAL_TYPE_LABELS = {
 
 @router.get("")
 @router.get("/")
-def meals_page(request: Request, db: Session = Depends(get_db)):
+def meals_page(request: Request, user: CurrentUser, db: Session = Depends(get_db)):
     today = date.today()
     meals = (
         db.query(MealEntry)
+        .filter(MealEntry.user_id == user.id)
         .order_by(MealEntry.entry_date.desc(), MealEntry.created_at.desc())
         .limit(80)
         .all()
     )
-    today_meals = db.query(MealEntry).filter(MealEntry.entry_date == today).all()
+    today_meals = (
+        db.query(MealEntry)
+        .filter(MealEntry.user_id == user.id, MealEntry.entry_date == today)
+        .all()
+    )
     totals = {
         "calories": round(sum(meal.calories for meal in today_meals), 1),
         "protein_g": round(sum(meal.protein_g for meal in today_meals), 1),
@@ -41,24 +47,26 @@ def meals_page(request: Request, db: Session = Depends(get_db)):
         "fat_g": round(sum(meal.fat_g for meal in today_meals), 1),
     }
 
-    return templates.TemplateResponse(
-        name="meals.html",
-        request=request,
-        context={
-            "request": request,
+    return render(
+        request,
+        "meals.html",
+        {
             "today": today,
             "meals": meals,
             "totals": totals,
             "meal_type_labels": MEAL_TYPE_LABELS,
-            "templates": list(TEMPLATE_ESTIMATES.keys()),
+            "templates": [],
             "active_page": "meals",
         },
+        user=user,
     )
 
 
 @router.post("")
 @router.post("/")
 async def create_meal(
+    request: Request,
+    user: CurrentUser,
     entry_date: date = Form(...),
     meal_type: str = Form(...),
     description: str = Form(...),
@@ -67,39 +75,56 @@ async def create_meal(
     carbs_g: str = Form(""),
     fat_g: str = Form(""),
     notes: str | None = Form(None),
+    csrf_token: str = Form(""),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
-    image_path = await _save_upload(image)
-    estimate = estimate_food_nutrition(description, image_path)
+    validate_csrf(request, csrf_token)
+    image_key = None
+    if image and image.filename:
+        try:
+            image_key = storage_service.save_meal_image(user.id, await image.read(), image.filename)
+        except StorageError:
+            return RedirectResponse(url="/meals", status_code=303)
+
+    manual = any(value.strip() for value in (calories, protein_g, carbs_g, fat_g))
+    if manual:
+        estimate_calories = _parse_float(calories, 0)
+        estimate_protein = _parse_float(protein_g, 0)
+        estimate_carbs = _parse_float(carbs_g, 0)
+        estimate_fat = _parse_float(fat_g, 0)
+        source = "manual"
+        reasoning = "已使用手动填写的营养数字。"
+    else:
+        estimate = estimate_meal_nutrition(db, description, None, user_id=user.id)
+        estimate_calories = estimate.calories
+        estimate_protein = estimate.protein_g
+        estimate_carbs = estimate.carbs_g
+        estimate_fat = estimate.fat_g
+        source = estimate.source
+        reasoning = estimate.reasoning
 
     meal = MealEntry(
+        user_id=user.id,
         entry_date=entry_date,
         meal_type=meal_type,
         description=description.strip(),
-        image_path=image_path,
-        calories=_parse_float(calories, estimate.calories),
-        protein_g=_parse_float(protein_g, estimate.protein_g),
-        carbs_g=_parse_float(carbs_g, estimate.carbs_g),
-        fat_g=_parse_float(fat_g, estimate.fat_g),
+        image_path=image_key,
+        calories=estimate_calories,
+        protein_g=estimate_protein,
+        carbs_g=estimate_carbs,
+        fat_g=estimate_fat,
+        estimate_source=source,
+        estimate_reasoning=reasoning,
         notes=notes,
     )
-    db.add(meal)
-    db.commit()
+    try:
+        db.add(meal)
+        db.commit()
+    except Exception:
+        storage_service.delete_object(image_key)
+        raise
     return RedirectResponse(url="/meals", status_code=303)
-
-
-async def _save_upload(image: UploadFile | None) -> str | None:
-    if not image or not image.filename:
-        return None
-
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    suffix = Path(image.filename).suffix.lower() or ".jpg"
-    filename = f"{uuid4().hex}{suffix}"
-    destination = UPLOAD_DIR / filename
-    content = await image.read()
-    destination.write_bytes(content)
-    return f"/uploads/{filename}"
 
 
 def _parse_float(value: str, default: float) -> float:

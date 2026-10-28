@@ -1,9 +1,15 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+alembic
 jinja2
 python-multipart
 openai
 python-dotenv
 pillow
 psycopg2-binary
+supabase
+httpx
+bcrypt
+itsdangerous
+pytest

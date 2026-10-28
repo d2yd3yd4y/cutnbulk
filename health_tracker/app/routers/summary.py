@@ -1,31 +1,39 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import CurrentUser
 from app.models import DailyEntry, MealEntry
+from app.templating import render
 
 
 router = APIRouter(prefix="/summary", tags=["summary"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("")
 @router.get("/")
-def summary_page(request: Request, db: Session = Depends(get_db)):
+def summary_page(request: Request, user: CurrentUser, db: Session = Depends(get_db)):
     today = date.today()
     start = today - timedelta(days=6)
     entries = (
         db.query(DailyEntry)
-        .filter(DailyEntry.entry_date >= start, DailyEntry.entry_date <= today)
+        .filter(
+            DailyEntry.user_id == user.id,
+            DailyEntry.entry_date >= start,
+            DailyEntry.entry_date <= today,
+        )
         .order_by(DailyEntry.entry_date.desc())
         .all()
     )
     meals = (
         db.query(MealEntry)
-        .filter(MealEntry.entry_date >= start, MealEntry.entry_date <= today)
+        .filter(
+            MealEntry.user_id == user.id,
+            MealEntry.entry_date >= start,
+            MealEntry.entry_date <= today,
+        )
         .all()
     )
     entries_by_date = {entry.entry_date.isoformat(): entry for entry in entries}
@@ -53,11 +61,10 @@ def summary_page(request: Request, db: Session = Depends(get_db)):
         "advice": _build_advice(len(recent_days), _avg(protein), _avg(calories)),
     }
 
-    return templates.TemplateResponse(
-        name="summary.html",
-        request=request,
-        context={
-            "request": request,
+    return render(
+        request,
+        "summary.html",
+        {
             "today": today,
             "start": start,
             "summary": summary,
@@ -67,6 +74,7 @@ def summary_page(request: Request, db: Session = Depends(get_db)):
             "recent_days": recent_days,
             "active_page": "summary",
         },
+        user=user,
     )
 
 

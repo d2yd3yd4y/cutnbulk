@@ -1,3 +1,4 @@
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <label>
   餐次
   <select name="meal_type" class="meal-type-select" required>
@@ -39,7 +40,7 @@
   </label>
   <div class="image-preview-card {% if meal and meal.image_path %}has-image{% endif %}">
     {% if meal and meal.image_path %}
-      <img class="image-preview" src="{{ meal.image_path }}" alt="已选照片预览" data-saved-src="{{ meal.image_path }}">
+      <img class="image-preview" src="/media/meals/{{ meal.id }}" alt="已选照片预览" data-saved-src="/media/meals/{{ meal.id }}">
       <p class="image-preview-name">当前已保存照片</p>
     {% else %}
       <img class="image-preview" alt="照片预览">

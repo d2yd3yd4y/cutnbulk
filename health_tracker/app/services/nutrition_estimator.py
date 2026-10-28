@@ -58,12 +58,20 @@ def estimate_meal_nutrition(
     db: Session,
     description: str,
     image_path: str | None = None,
+    user_id: str | None = None,
 ) -> NutritionEstimateResult:
     normalized = normalize_text(description)
     if not normalized:
         return _fallback_estimate(description, image_path)
 
-    food_items = db.query(FoodItem).all()
+    query = db.query(FoodItem)
+    if user_id:
+        query = query.filter(
+            (FoodItem.owner_user_id.is_(None)) | (FoodItem.owner_user_id == user_id)
+        )
+    else:
+        query = query.filter(FoodItem.owner_user_id.is_(None))
+    food_items = query.all()
     matches = _match_food_items(food_items, normalized)
     if not matches:
         return _fallback_estimate(description, image_path)

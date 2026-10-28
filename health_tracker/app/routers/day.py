@@ -1,23 +1,23 @@
 import json
 from datetime import date, datetime
 from pathlib import Path
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import CurrentUser
 from app.models import DailyEntry, MealEntry, MealFoodMatch
+from app.security.csrf import validate_csrf
 from app.services.goal_service import get_goal_progress_for_day
 from app.services.nutrition_estimator import NutritionEstimateResult, estimate_meal_nutrition
+from app.services.storage import StorageError, storage_service
 from app.services.vision_food_estimator import estimate_food_from_image
+from app.templating import render
 
 
 router = APIRouter(prefix="/day", tags=["day"])
-templates = Jinja2Templates(directory="app/templates")
-UPLOAD_DIR = Path("app/uploads")
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 MEAL_TYPE_LABELS = {
     "breakfast": "早餐",
@@ -34,6 +34,7 @@ MEAL_TYPES = list(MEAL_TYPE_LABELS.items())
 def day_page(
     entry_date: str,
     request: Request,
+    user: CurrentUser,
     saved: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -41,10 +42,14 @@ def day_page(
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
-    entry = db.query(DailyEntry).filter(DailyEntry.entry_date == target_date).first()
+    entry = (
+        db.query(DailyEntry)
+        .filter(DailyEntry.user_id == user.id, DailyEntry.entry_date == target_date)
+        .first()
+    )
     meals = (
         db.query(MealEntry)
-        .filter(MealEntry.entry_date == target_date)
+        .filter(MealEntry.user_id == user.id, MealEntry.entry_date == target_date)
         .order_by(MealEntry.created_at.asc(), MealEntry.id.asc())
         .all()
     )
@@ -60,11 +65,10 @@ def day_page(
     uncertainty_by_meal = {
         meal.id: _parse_uncertainty_factors(meal.uncertainty_factors) for meal in meals
     }
-    return templates.TemplateResponse(
-        name="day.html",
-        request=request,
-        context={
-            "request": request,
+    return render(
+        request,
+        "day.html",
+        {
             "entry": entry,
             "entry_date": target_date,
             "date_label": _format_date_label(target_date),
@@ -73,32 +77,41 @@ def day_page(
             "meal_totals": _meal_totals(meals),
             "matches_by_meal": matches_by_meal,
             "uncertainty_by_meal": uncertainty_by_meal,
-            "goal_progress": get_goal_progress_for_day(db, target_date),
+            "goal_progress": get_goal_progress_for_day(db, user.id, target_date),
             "meal_types": MEAL_TYPES,
             "meal_type_labels": MEAL_TYPE_LABELS,
             "saved": saved,
             "active_page": "today" if target_date == date.today() else "calendar",
         },
+        user=user,
     )
 
 
 @router.post("/{entry_date}")
 async def save_day(
     entry_date: str,
+    request: Request,
+    user: CurrentUser,
     weight_kg: str = Form(""),
     waist_cm: str = Form(""),
     sleep_hours: str = Form(""),
     fatigue_level: str = Form(""),
     daily_note: str = Form(""),
+    csrf_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    validate_csrf(request, csrf_token)
     target_date = _parse_date(entry_date)
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
-    entry = db.query(DailyEntry).filter(DailyEntry.entry_date == target_date).first()
+    entry = (
+        db.query(DailyEntry)
+        .filter(DailyEntry.user_id == user.id, DailyEntry.entry_date == target_date)
+        .first()
+    )
     if entry is None:
-        entry = DailyEntry(entry_date=target_date)
+        entry = DailyEntry(user_id=user.id, entry_date=target_date)
         db.add(entry)
 
     entry.weight_kg = _parse_float(weight_kg)
@@ -114,6 +127,8 @@ async def save_day(
 @router.post("/{entry_date}/meals")
 async def create_meal(
     entry_date: str,
+    request: Request,
+    user: CurrentUser,
     meal_type: str = Form(...),
     meal_name: str = Form(""),
     description: str = Form(""),
@@ -122,36 +137,52 @@ async def create_meal(
     carbs_g: str = Form(""),
     fat_g: str = Form(""),
     notes: str = Form(""),
+    csrf_token: str = Form(""),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
+    validate_csrf(request, csrf_token)
     target_date = _parse_date(entry_date)
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
-    image_path = await _save_upload(image)
-    if not description.strip() and not image_path:
+    try:
+        image_key = await _save_upload(user.id, image)
+    except StorageError as exc:
+        return RedirectResponse(
+            url=f"/day/{target_date.isoformat()}?saved=0",
+            status_code=303,
+            headers={"X-Error": exc.message},
+        )
+
+    if not description.strip() and not image_key:
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
-    meal = MealEntry(entry_date=target_date)
-    estimate = _apply_meal_form(
-        db=db,
-        meal=meal,
-        meal_type=meal_type,
-        meal_name=meal_name,
-        description=description,
-        calories=calories,
-        protein_g=protein_g,
-        carbs_g=carbs_g,
-        fat_g=fat_g,
-        notes=notes,
-        image_path=image_path,
-        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
-    )
-    db.add(meal)
-    db.flush()
-    _sync_meal_matches(db, meal, estimate)
-    db.commit()
+    meal = MealEntry(user_id=user.id, entry_date=target_date)
+    try:
+        estimate = _apply_meal_form(
+            db=db,
+            user_id=user.id,
+            meal=meal,
+            meal_type=meal_type,
+            meal_name=meal_name,
+            description=description,
+            calories=calories,
+            protein_g=protein_g,
+            carbs_g=carbs_g,
+            fat_g=fat_g,
+            notes=notes,
+            image_path=image_key,
+            prefer_vision=bool(image_key) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
+        )
+        db.add(meal)
+        db.flush()
+        _sync_meal_matches(db, meal, estimate)
+        db.commit()
+    except Exception:
+        if image_key:
+            storage_service.delete_object(image_key)
+        raise
     return RedirectResponse(url=f"/day/{target_date.isoformat()}?saved=1", status_code=303)
 
 
@@ -159,6 +190,8 @@ async def create_meal(
 async def update_meal(
     entry_date: str,
     meal_id: int,
+    request: Request,
+    user: CurrentUser,
     meal_type: str = Form(...),
     meal_name: str = Form(""),
     description: str = Form(""),
@@ -167,58 +200,96 @@ async def update_meal(
     carbs_g: str = Form(""),
     fat_g: str = Form(""),
     notes: str = Form(""),
+    csrf_token: str = Form(""),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
+    validate_csrf(request, csrf_token)
     target_date = _parse_date(entry_date)
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
     meal = (
         db.query(MealEntry)
-        .filter(MealEntry.id == meal_id, MealEntry.entry_date == target_date)
+        .filter(
+            MealEntry.id == meal_id,
+            MealEntry.user_id == user.id,
+            MealEntry.entry_date == target_date,
+        )
         .first()
     )
     if meal is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    old_image = meal.image_path
+    image_key = None
+    try:
+        image_key = await _save_upload(user.id, image)
+    except StorageError:
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
-    image_path = await _save_upload(image)
-    if not description.strip() and not image_path and not meal.image_path:
+    if not description.strip() and not image_key and not meal.image_path:
         return RedirectResponse(url=f"/day/{target_date.isoformat()}", status_code=303)
 
-    estimate = _apply_meal_form(
-        db=db,
-        meal=meal,
-        meal_type=meal_type,
-        meal_name=meal_name,
-        description=description,
-        calories=calories,
-        protein_g=protein_g,
-        carbs_g=carbs_g,
-        fat_g=fat_g,
-        notes=notes,
-        image_path=image_path,
-        prefer_vision=bool(image_path) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
-    )
-    _sync_meal_matches(db, meal, estimate)
-    db.commit()
+    try:
+        estimate = _apply_meal_form(
+            db=db,
+            user_id=user.id,
+            meal=meal,
+            meal_type=meal_type,
+            meal_name=meal_name,
+            description=description,
+            calories=calories,
+            protein_g=protein_g,
+            carbs_g=carbs_g,
+            fat_g=fat_g,
+            notes=notes,
+            image_path=image_key,
+            prefer_vision=bool(image_key) and not _has_manual_nutrition(calories, protein_g, carbs_g, fat_g),
+        )
+        _sync_meal_matches(db, meal, estimate)
+        db.commit()
+    except Exception:
+        if image_key:
+            storage_service.delete_object(image_key)
+        raise
+
+    if image_key and old_image and old_image != image_key:
+        storage_service.delete_object(old_image)
     return RedirectResponse(url=f"/day/{target_date.isoformat()}?saved=1", status_code=303)
 
 
 @router.post("/{entry_date}/meals/{meal_id}/delete")
-def delete_meal(entry_date: str, meal_id: int, db: Session = Depends(get_db)):
+def delete_meal(
+    entry_date: str,
+    meal_id: int,
+    request: Request,
+    user: CurrentUser,
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    validate_csrf(request, csrf_token)
     target_date = _parse_date(entry_date)
     if target_date is None:
         return RedirectResponse(url=f"/day/{date.today().isoformat()}", status_code=303)
 
     meal = (
         db.query(MealEntry)
-        .filter(MealEntry.id == meal_id, MealEntry.entry_date == target_date)
+        .filter(
+            MealEntry.id == meal_id,
+            MealEntry.user_id == user.id,
+            MealEntry.entry_date == target_date,
+        )
         .first()
     )
-    if meal is not None:
-        db.delete(meal)
-        db.commit()
+    if meal is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    image_key = meal.image_path
+    db.query(MealFoodMatch).filter(MealFoodMatch.meal_entry_id == meal.id).delete()
+    db.delete(meal)
+    db.commit()
+    storage_service.delete_object(image_key)
     return RedirectResponse(url=f"/day/{target_date.isoformat()}?saved=1", status_code=303)
 
 
@@ -244,6 +315,7 @@ def _meal_totals(meals: list[MealEntry]) -> dict[str, float]:
 
 def _apply_meal_form(
     db: Session,
+    user_id: str,
     meal: MealEntry,
     meal_type: str,
     meal_name: str,
@@ -257,10 +329,38 @@ def _apply_meal_form(
     prefer_vision: bool = False,
 ):
     clean_description = description.strip()
-    if prefer_vision:
-        estimate = estimate_food_from_image(db, image_path or meal.image_path, clean_description)
+    manual = _has_manual_nutrition(calories, protein_g, carbs_g, fat_g)
+
+    if manual:
+        estimate = NutritionEstimateResult(
+            dish_name=clean_description or meal.description or "手动记录",
+            calories=_parse_float(calories, 0) or 0,
+            protein_g=_parse_float(protein_g, 0) or 0,
+            carbs_g=_parse_float(carbs_g, 0) or 0,
+            fat_g=_parse_float(fat_g, 0) or 0,
+            confidence=1.0,
+            confidence_label="high",
+            reasoning="已使用手动填写的营养数字。",
+            matched_foods=[],
+            source="manual",
+        )
+    elif prefer_vision:
+        estimate = estimate_food_from_image(db, image_path or meal.image_path, clean_description, user_id=user_id)
+    elif clean_description:
+        estimate = estimate_meal_nutrition(db, clean_description, None, user_id=user_id)
     else:
-        estimate = estimate_meal_nutrition(db, clean_description, image_path or meal.image_path)
+        estimate = NutritionEstimateResult(
+            dish_name="（未估算）",
+            calories=0,
+            protein_g=0,
+            carbs_g=0,
+            fat_g=0,
+            confidence=0,
+            confidence_label="low",
+            reasoning="未填写营养数字且无法估算。",
+            matched_foods=[],
+            source="none",
+        )
 
     meal.meal_type = meal_type if meal_type in MEAL_TYPE_LABELS else "custom"
     meal.meal_name = meal_name.strip() or None
@@ -304,17 +404,13 @@ def _sync_meal_matches(db: Session, meal: MealEntry, estimate: NutritionEstimate
         )
 
 
-async def _save_upload(image: UploadFile | None) -> str | None:
+async def _save_upload(user_id: str, image: UploadFile | None) -> str | None:
     if not image or not image.filename:
         return None
-
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    suffix = Path(image.filename).suffix.lower() or ".jpg"
-    filename = f"{uuid4().hex}{suffix}"
-    destination = UPLOAD_DIR / filename
     content = await image.read()
-    destination.write_bytes(content)
-    return f"/uploads/{filename}"
+    if not content:
+        return None
+    return storage_service.save_meal_image(user_id, content, image.filename)
 
 
 def _parse_float(value: str, default: float | None = None) -> float | None:
